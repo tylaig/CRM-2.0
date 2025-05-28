@@ -73,6 +73,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Buscar TODOS os estágios de TODOS os pipelines para poder filtrar corretamente
   const { data: allPipelineStages = [] } = useQuery<PipelineStage[]>({
     queryKey: ['/api/pipeline-stages'],
+    staleTime: 0,
+    refetchOnMount: true,
   });
   
   // Campos base do formulário

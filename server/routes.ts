@@ -103,9 +103,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/pipeline-stages", async (req: Request, res: Response) => {
     try {
       const pipelineId = req.query.pipelineId ? parseInt(req.query.pipelineId as string) : undefined;
-      const stages = await storage.getPipelineStages(pipelineId);
+      let stages;
+      
+      if (pipelineId) {
+        // Buscar estágios de um pipeline específico
+        stages = await storage.getPipelineStages(pipelineId);
+      } else {
+        // Buscar TODOS os estágios de TODOS os pipelines
+        stages = await storage.getAllPipelineStages();
+      }
+      
       res.json(stages);
     } catch (error) {
+      console.error("Error fetching pipeline stages:", error);
       res.status(500).json({ message: "Failed to fetch pipeline stages" });
     }
   });
