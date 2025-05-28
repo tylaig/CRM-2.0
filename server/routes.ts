@@ -186,11 +186,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stageId = req.query.stageId ? parseInt(req.query.stageId as string) : undefined;
       const pipelineId = req.query.pipelineId ? parseInt(req.query.pipelineId as string) : undefined;
       const filterUserId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
       let deals;
+      
       if (user.role === 'admin') {
         // Admin pode ver todos ou filtrar por userId
         if (typeof stageId === 'number' && !isNaN(stageId)) {
           deals = await storage.getDealsByStage(stageId);
+        } else if (typeof pipelineId === 'number' && !isNaN(pipelineId)) {
+          deals = await storage.getDeals(pipelineId);
         } else {
           deals = await storage.getDeals();
         }
@@ -201,6 +205,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Usuário comum só vê seus próprios negócios
         if (typeof stageId === 'number' && !isNaN(stageId)) {
           deals = (await storage.getDealsByStage(stageId)).filter((deal: any) => deal.userId === user.id);
+        } else if (typeof pipelineId === 'number' && !isNaN(pipelineId)) {
+          deals = (await storage.getDeals(pipelineId)).filter((deal: any) => deal.userId === user.id);
         } else {
           deals = (await storage.getDeals()).filter((deal: any) => deal.userId === user.id);
         }

@@ -118,70 +118,79 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     const fetchDeals = async () => {
       if (!activePipelineId) return;
       let dealsData: Deal[] = [];
-      if (filteredDeals) {
-        // Se receber deals via props, use-os diretamente
-        dealsData = filteredDeals;
-      } else {
-        // Caso contrário, buscar manualmente como antes
-        try {
-          let url = `/api/deals?pipelineId=${activePipelineId}`;
-          if (filters) {
-            if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-            if (filters.stageId) url += `&stageId=${filters.stageId}`;
-            if (filters.status && filters.status.length > 0) {
-              filters.status.forEach(status => {
-                url += `&status=${encodeURIComponent(status)}`;
-              });
-            }
-            if (filters.sortOrder && filters.sortBy) {
-              url += `&sortBy=${filters.sortBy}&sortOrder=${filters.sortOrder}`;
-            }
-            if (filters.hideClosed) {
-              url += `&hideClosed=true`;
-            }
-            if (filters.winReason) {
-              url += `&winReason=${encodeURIComponent(filters.winReason)}`;
-            }
-            if (filters.lostReason) {
-              url += `&lostReason=${encodeURIComponent(filters.lostReason)}`;
-            }
+      
+      // Sempre buscar os deals atualizados do servidor para garantir dados frescos
+      try {
+        let url = `/api/deals`;
+        const params = new URLSearchParams();
+        
+        if (filters) {
+          if (filters.search) params.append('search', filters.search);
+          if (filters.stageId) params.append('stageId', filters.stageId.toString());
+          if (filters.status && filters.status.length > 0) {
+            filters.status.forEach(status => {
+              params.append('status', status);
+            });
           }
-          dealsData = await apiRequest(url, 'GET');
-        } catch (error) {
-          console.error("Error fetching deals:", error);
-          toast({
-            title: "Erro ao carregar negócios",
-            description: "Não foi possível carregar os negócios.",
-            variant: "destructive",
-          });
-          return;
+          if (filters.sortOrder && filters.sortBy) {
+            params.append('sortBy', filters.sortBy);
+            params.append('sortOrder', filters.sortOrder);
+          }
+          if (filters.hideClosed) {
+            params.append('hideClosed', 'true');
+          }
+          if (filters.winReason) {
+            params.append('winReason', filters.winReason);
+          }
+          if (filters.lostReason) {
+            params.append('lostReason', filters.lossReason);
+          }
         }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
+        const allDeals = await apiRequest(url, 'GET');
+        
+        // Filtrar deals apenas do pipeline ativo
+        dealsData = allDeals.filter((deal: Deal) => deal.pipelineId === activePipelineId);
+        
+        // Se userId foi fornecido, filtrar por usuário também
+        if (userId) {
+          dealsData = dealsData.filter((deal: Deal) => deal.userId === userId);
+        }
+        
+      } catch (error) {
+        console.error("Error fetching deals:", error);
+        toast({
+          title: "Erro ao carregar negócios",
+          description: "Não foi possível carregar os negócios.",
+          variant: "destructive",
+        });
+        return;
       }
       
-      console.log("Fetched deals:", dealsData.length);
+      console.log(`Fetched deals for pipeline ${activePipelineId}:`, dealsData.length);
       
       // Preparar todos os negócios para processamento
       const processedDeals: { [id: number]: boolean } = {};
 
       const stagesWithDeals = pipelineStages
-        .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
+        .filter(stage => !stage.isHidden && stage.pipelineId === activePipelineId) // Só mostrar os estágios visíveis do pipeline ativo
         .map((stage) => {
           // Filtrar negócios para este estágio, com tratamento especial para estágios de vendas realizadas/perdidas
           let stageDeals: Deal[] = [];
           
           if (stage.stageType === "completed") {
-            // Para estágio "Vendas Realizadas", mostrar TODOS os negócios com status "won",
-            // mesmo que estejam em outro estágio (será corrigido automaticamente)
+            // Para estágio "Vendas Realizadas", mostrar TODOS os negócios com status "won"
             stageDeals = dealsData.filter(deal => 
-              (deal.stageId === stage.id || deal.saleStatus === "won") &&
-              deal.pipelineId === stage.pipelineId
+              (deal.stageId === stage.id || deal.saleStatus === "won")
             );
           } else if (stage.stageType === "lost") {
-            // Para estágio "Vendas Perdidas", mostrar TODOS os negócios com status "lost",
-            // mesmo que estejam em outro estágio (será corrigido automaticamente)
+            // Para estágio "Vendas Perdidas", mostrar TODOS os negócios com status "lost"
             stageDeals = dealsData.filter(deal => 
-              (deal.stageId === stage.id || deal.saleStatus === "lost") &&
-              deal.pipelineId === stage.pipelineId
+              (deal.stageId === stage.id || deal.saleStatus === "lost")
             );
           } else {
             // Para estágios normais, só mostrar negócios deste estágio que NÃO estão completos/perdidos
@@ -199,7 +208,6 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           
           const totalValue = stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
           
-          // Calcule o valor total do estágio
           return {
             ...stage,
             deals: stageDeals,
@@ -220,7 +228,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     };
     
     fetchDeals();
-  }, [pipelineStages, activePipelineId, filters, filteredDeals, toast]);
+  }, [pipelineStages, activePipelineId, filters, userId, toast]);
   
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -305,13 +313,18 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['/api/deals'] }),
         queryClient.invalidateQueries({ queryKey: ['/api/deals', activePipelineId] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/deals', destStage.pipelineId] })
+        queryClient.invalidateQueries({ queryKey: ['/api/deals', destStage.pipelineId] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/pipeline-stages'] })
       ]);
+      
+      // Aguardar um pouco para o servidor processar
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Forçar recarregamento dos dados
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['/api/deals'] }),
-        queryClient.refetchQueries({ queryKey: ['/api/deals', activePipelineId] })
+        queryClient.refetchQueries({ queryKey: ['/api/deals', activePipelineId] }),
+        queryClient.refetchQueries({ queryKey: ['/api/deals', destStage.pipelineId] })
       ]);
       
       toast({
