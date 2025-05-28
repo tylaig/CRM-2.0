@@ -533,12 +533,14 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     refetchInterval: isOpen && !!deal?.id ? 3000 : false, // 3 segundos
   });
 
-  // Atualizar o campo notes apenas na abertura inicial do modal
+  // Atualizar o campo notes sempre que receber dados atualizados
   useEffect(() => {
     if (isOpen && deal) {
-      setNotes(deal.notes || "");
+      // Usar os dados mais recentes disponíveis (do refetch se existir, senão do deal original)
+      const latestNotes = dealDataFromApi?.notes || deal.notes || "";
+      setNotes(latestNotes);
     }
-  }, [isOpen, deal?.id, deal?.notes]);
+  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
