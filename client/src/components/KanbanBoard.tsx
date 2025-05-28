@@ -287,11 +287,26 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     
     // Se for para outro estágio, atualizar o stageId e pipelineId
     try {
+      console.log(`Movendo negócio ${dealId} para estágio ${destStage.id} no pipeline ${destStage.pipelineId}`);
+      
       await apiRequest(`/api/deals/${dealId}`, 'PUT', {
         stageId: destStage.id,
         pipelineId: destStage.pipelineId
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+      
+      // Invalidar múltiplas chaves de cache para garantir atualização
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/deals'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/deals', activePipelineId] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/deals', destStage.pipelineId] })
+      ]);
+      
+      // Forçar recarregamento dos dados
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['/api/deals'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/deals', activePipelineId] })
+      ]);
+      
       toast({
         title: "Negócio movido",
         description: `"${deal.name}" foi movido para ${destStage.name}`,
@@ -303,6 +318,8 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         description: "Não foi possível atualizar o estágio do negócio.",
         variant: "destructive",
       });
+      // Reverter o estado local em caso de erro
+      setBoardData([...boardData]);
       fetchUpdatedData();
     }
   };

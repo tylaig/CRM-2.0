@@ -118,15 +118,14 @@ export function usePipeline(activePipelineId?: number | null) {
       }
     }
     
-    // Filtro específico para excluir negócios ganhos ou perdidos do pipeline
-    // SOMENTE no pipeline Comercial (ID 1) devemos aplicar o filtro de ocultar negócios fechados
-    // Para outros pipelines (como Compras/Logística), mostrar todos os negócios
-    if (filters.hideClosed && !filters.winReason && !filters.lostReason && activePipelineId === 1) {
-      result = result.filter(deal => 
-        deal.saleStatus !== 'won' && 
-        deal.saleStatus !== 'lost'
-      );
-    }
+    // Removendo o filtro hideClosed para permitir que negócios "Won" e "Lost" apareçam no Kanban
+    // Os estágios específicos de "Vendas Realizadas" e "Vendas Perdidas" já fazem a filtragem adequada
+    // if (filters.hideClosed && !filters.winReason && !filters.lostReason && activePipelineId === 1) {
+    //   result = result.filter(deal => 
+    //     deal.saleStatus !== 'won' && 
+    //     deal.saleStatus !== 'lost'
+    //   );
+    // }
     
     // Aplicar filtro de estágio
     if (filters.stageId !== undefined) {
