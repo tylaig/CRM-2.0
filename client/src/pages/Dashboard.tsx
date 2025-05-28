@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import Header from "@/components/Header";
 import KanbanBoard from "@/components/KanbanBoard";
 import ListView from "@/components/ListView";
@@ -28,6 +29,7 @@ export default function Dashboard() {
   
   const { toast } = useToast();
   const { user, logout } = useAuth();
+  const { isConnected } = useWebSocket();
   
   // Estado para controlar o pipeline ativo
   const [activePipelineId, setActivePipelineId] = useState<number | null>(null);
