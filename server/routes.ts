@@ -1,5 +1,6 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import axios from "axios";
 import { eq } from "drizzle-orm";
@@ -27,6 +28,19 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+
+// WebSocket clients conectados
+const wsClients = new Set<WebSocket>();
+
+// Função para broadcast de atualizações
+function broadcastUpdate(type: string, data: any) {
+  const message = JSON.stringify({ type, data });
+  wsClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
 
 // Função utilitária para gerar token
 function generateToken(user: any) {
@@ -428,6 +442,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedDeal) {
         return res.status(404).json({ message: "Deal not found" });
       }
+      
+      // Broadcast da atualização em tempo real
+      broadcastUpdate('deal:updated', {
+        dealId: targetId,
+        deal: updatedDeal,
+        timestamp: new Date().toISOString()
+      });
       
       res.json(updatedDeal);
     } catch (error) {
@@ -1746,5 +1767,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", apiRouter);
   
   const httpServer = createServer(app);
+  
+  // Configurar WebSocket Server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('Cliente WebSocket conectado');
+    wsClients.add(ws);
+    
+    ws.on('close', () => {
+      console.log('Cliente WebSocket desconectado');
+      wsClients.delete(ws);
+    });
+    
+    ws.on('error', (error) => {
+      console.error('Erro WebSocket:', error);
+      wsClients.delete(ws);
+    });
+  });
+  
   return httpServer;
 }

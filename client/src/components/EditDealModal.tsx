@@ -545,7 +545,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       console.log("Valor atual do campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
       console.log("===================================");
-      setNotes(latestNotes);
+      setNotes(latestNotes || "");
     }
   }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
 
