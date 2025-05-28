@@ -536,8 +536,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Atualizar o campo notes sempre que receber dados atualizados
   useEffect(() => {
     if (isOpen && deal && !isEditingNotes) {
-      // Usar os dados mais recentes disponíveis (do refetch se existir, senão do deal original)
-      const latestNotes = dealDataFromApi?.notes || deal.notes || "";
+      // SEMPRE usar os dados da API se disponíveis, pois são os mais recentes
+      const latestNotes = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
       console.log("=== USEEFFECT ATUALIZANDO NOTES ===");
       console.log("Deal notes:", deal.notes);
       console.log("API notes:", dealDataFromApi?.notes);
