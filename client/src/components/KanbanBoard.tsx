@@ -558,7 +558,18 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
                                   {deal.name}
                                 </div>
                               </div>
-                              <div>
+                              <div className="flex items-center gap-1">
+                                {/* Badge para indicar se foi marcado como ganho ou perda */}
+                                {deal.saleStatus === "won" && (
+                                  <Badge className="bg-green-500 hover:bg-green-600 text-white text-[8px] px-1 py-0 h-4">
+                                    GANHO
+                                  </Badge>
+                                )}
+                                {deal.saleStatus === "lost" && (
+                                  <Badge className="bg-red-500 hover:bg-red-600 text-white text-[8px] px-1 py-0 h-4">
+                                    PERDA
+                                  </Badge>
+                                )}
                                 {getStatusBadge(deal.status)}
                               </div>
                             </div>

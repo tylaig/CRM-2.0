@@ -138,8 +138,17 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   
   // Filtra os estágios por pipeline usando TODOS os estágios disponíveis
   const filteredStages = allPipelineStages.filter(stage => {
-    return pipelineId ? stage.pipelineId === parseInt(pipelineId) : false;
+    const result = pipelineId ? stage.pipelineId === parseInt(pipelineId) : false;
+    return result;
   });
+  
+  // Debug para verificar os estágios filtrados
+  useEffect(() => {
+    console.log("Pipeline selecionado:", pipelineId);
+    console.log("Todos os estágios:", allPipelineStages.length);
+    console.log("Estágios filtrados:", filteredStages.length);
+    console.log("Estágios filtrados detalhes:", filteredStages.map(s => `${s.id}: ${s.name} (Pipeline ${s.pipelineId})`));
+  }, [pipelineId, allPipelineStages, filteredStages]);
   
   // Limpar seleção de estágio quando o pipeline mudar
   useEffect(() => {
