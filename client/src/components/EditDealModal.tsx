@@ -298,16 +298,28 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     mutationFn: async (data: Partial<Deal>) => {
       if (!deal) return null;
       
+      console.log("Executando mutation do deal com dados:", data);
+      
       // Incluir o valor da cotação selecionada nos dados a serem atualizados
       if (selectedQuoteValue !== null) {
         data.quoteValue = selectedQuoteValue;
         data.value = selectedQuoteValue;
       }
       
+      // Garantir que pipelineId e stageId sejam números válidos
+      if (data.pipelineId && typeof data.pipelineId === 'string') {
+        data.pipelineId = parseInt(data.pipelineId);
+      }
+      if (data.stageId && typeof data.stageId === 'string') {
+        data.stageId = parseInt(data.stageId);
+      }
+      
       // Se o usuário está mudando o pipeline ou estágio manualmente,
       // resetar o saleStatus para 'negotiation' para permitir a movimentação
       if ((data.pipelineId && data.pipelineId !== deal.pipelineId) || 
           (data.stageId && data.stageId !== deal.stageId)) {
+        
+        console.log("Detectada mudança de pipeline/stage, resetando saleStatus");
         
         // Verificar se o novo estágio não é do tipo completed/lost
         const targetStage = allPipelineStages.find(s => s.id === data.stageId);
@@ -317,6 +329,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         }
       }
       
+      console.log("Dados finais que serão enviados para a API:", data);
       return apiRequest(`/api/deals/${deal.id}`, "PUT", data);
     },
     onSuccess: async () => {
@@ -404,6 +417,12 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Função para manipular salvamento
   const handleSave = () => {
     if (!deal) return;
+    
+    toast({
+      title: "Salvando...",
+      description: "Atualizando informações...",
+    });
+    
     // Preparar dados do lead para atualização
     const leadUpdateData: Partial<Lead> = {
       companyName,
@@ -425,27 +444,31 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     if (zipCode) {
       leadUpdateData.zipCode = zipCode;
     }
-    leadUpdateDataRef.current = leadUpdateData;
-    toast({
-      title: "Salvando...",
-      description: "Atualizando informações...",
-    });
-    // Garante que os valores mais recentes dos códigos de cotação sejam enviados
+    
+    // Preparar dados do deal para atualização
+    const dealUpdate: Partial<Deal> = {
+      name,
+      value: parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0,
+      status,
+      pipelineId: parseInt(pipelineId),
+      stageId: parseInt(stageId),
+      quoteCodeSao,
+      quoteCodePara,
+      notes,
+    };
+    
+    console.log("Dados que serão enviados para atualização do deal:", dealUpdate);
+    console.log("Pipeline atual:", deal.pipelineId, "-> Novo pipeline:", dealUpdate.pipelineId);
+    console.log("Stage atual:", deal.stageId, "-> Novo stage:", dealUpdate.stageId);
+    
+    // Atualizar lead primeiro
     updateLeadMutation.mutate(leadUpdateData, {
       onSuccess: () => {
-        const dealUpdate: Partial<Deal> = {
-          name,
-          value: parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0,
-          status,
-          pipelineId: parseInt(pipelineId),
-          stageId: parseInt(stageId),
-          quoteCodeSao,
-          quoteCodePara,
-          notes,
-        };
-        
-        console.log("Atualizando deal com:", dealUpdate);
-        if (dealUpdate.userId === undefined) delete dealUpdate.userId;
+        // Após sucesso do lead, atualizar o deal com os dados corretos
+        updateDealMutation.mutate(dealUpdate);
+      },
+      onError: () => {
+        // Se falhar ao atualizar o lead, ainda assim tentar atualizar o deal
         updateDealMutation.mutate(dealUpdate);
       }
     });
