@@ -538,7 +538,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     if (isOpen && deal) {
       setNotes(deal.notes || "");
     }
-  }, [isOpen, deal?.id]);
+  }, [isOpen, deal?.id, deal?.notes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
