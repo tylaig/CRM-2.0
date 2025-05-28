@@ -535,7 +535,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
 
   // Atualizar o campo notes sempre que receber dados atualizados
   useEffect(() => {
-    if (isOpen && deal) {
+    if (isOpen && deal && !isEditingNotes) {
       // Usar os dados mais recentes disponíveis (do refetch se existir, senão do deal original)
       const latestNotes = dealDataFromApi?.notes || deal.notes || "";
       console.log("=== USEEFFECT ATUALIZANDO NOTES ===");
@@ -545,11 +545,9 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       console.log("Valor atual do campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
       console.log("===================================");
-      if (!isEditingNotes) {
-        setNotes(latestNotes);
-      }
+      setNotes(latestNotes);
     }
-  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes, notes]);
+  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
