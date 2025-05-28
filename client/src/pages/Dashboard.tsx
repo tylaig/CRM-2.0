@@ -44,9 +44,10 @@ export default function Dashboard() {
   
   useEffect(() => {
     if (defaultPipeline?.id && !activePipelineId) {
+      console.log("Definindo pipeline padrão:", defaultPipeline.id);
       setActivePipelineId(defaultPipeline.id);
     }
-  }, [defaultPipeline, activePipelineId]);
+  }, [defaultPipeline?.id, activePipelineId]);
   
   const { pipelineStages, refreshPipelineData, filters, updateFilters, deals } = usePipeline(activePipelineId);
   

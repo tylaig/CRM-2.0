@@ -129,6 +129,12 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         return;
       }
       
+      // Aguardar os estágios serem carregados antes de buscar os deals
+      if (pipelineStages.length === 0) {
+        console.log("Aguardando estágios serem carregados...");
+        return;
+      }
+      
       console.log(`=== FETCH DEALS INICIADO PARA PIPELINE ${activePipelineId} ===`);
       console.log("Estágios disponíveis:", pipelineStages.length);
       
@@ -260,7 +266,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     };
     
     fetchDeals();
-  }, [activePipelineId, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
+  }, [activePipelineId, pipelineStages.length, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
   
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;

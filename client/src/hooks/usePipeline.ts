@@ -47,6 +47,8 @@ export function usePipeline(activePipelineId?: number | null) {
   const { data: pipelineStages = [], isLoading: isLoadingStages } = useQuery<PipelineStage[]>({
     queryKey: ['/api/pipeline-stages'],
     enabled: true, // Busca todos os estágios sempre
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+    refetchOnMount: true,
     onSuccess: (data) => {
       console.log("usePipeline - Estágios carregados:", data.length);
       console.log("usePipeline - Estágios por pipeline:", data.reduce((acc, stage) => {
