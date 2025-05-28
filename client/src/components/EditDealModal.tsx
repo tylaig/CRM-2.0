@@ -262,22 +262,6 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     onSuccess: (updatedLead) => {
       console.log("Lead atualizado com sucesso:", updatedLead);
       queryClient.invalidateQueries({ queryKey: [`/api/leads/${deal?.leadId}`] });
-      // Após atualizar o lead com sucesso, atualizar o deal
-      if (leadUpdateDataRef.current) {
-        const dealUpdate: Partial<Deal> = {
-          ...deal,
-          quoteCodeSao,
-          quoteCodePara,
-          notes,
-        };
-        // Remover campos que podem ser undefined/null e não são obrigatórios
-        if (dealUpdate.id === undefined) delete dealUpdate.id;
-        if (dealUpdate.leadId === undefined) delete dealUpdate.leadId;
-        if (dealUpdate.stageId === undefined) delete dealUpdate.stageId;
-        if (dealUpdate.pipelineId === undefined) delete dealUpdate.pipelineId;
-        if (dealUpdate.userId === undefined) delete dealUpdate.userId;
-        updateDealMutation.mutate(dealUpdate);
-      }
     },
     onError: (error) => {
       toast({
@@ -479,17 +463,14 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     console.log("Stage atual:", deal.stageId, "-> Novo stage:", dealUpdate.stageId);
     console.log("================================");
     
+    // Armazenar dados do lead para referência
+    leadUpdateDataRef.current = leadUpdateData;
+    
     // Atualizar lead primeiro
-    updateLeadMutation.mutate(leadUpdateData, {
-      onSuccess: () => {
-        // Após sucesso do lead, atualizar o deal com os dados corretos
-        updateDealMutation.mutate(dealUpdate);
-      },
-      onError: () => {
-        // Se falhar ao atualizar o lead, ainda assim tentar atualizar o deal
-        updateDealMutation.mutate(dealUpdate);
-      }
-    });
+    updateLeadMutation.mutate(leadUpdateData);
+    
+    // Atualizar deal diretamente com os dados corretos
+    updateDealMutation.mutate(dealUpdate);
   };
   
   // Confirmar exclusão
