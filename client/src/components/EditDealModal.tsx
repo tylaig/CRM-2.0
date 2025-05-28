@@ -70,6 +70,11 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     queryKey: ['/api/pipelines'],
   });
   
+  // Buscar TODOS os estágios de TODOS os pipelines para poder filtrar corretamente
+  const { data: allPipelineStages = [] } = useQuery<PipelineStage[]>({
+    queryKey: ['/api/pipeline-stages'],
+  });
+  
   // Campos base do formulário
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -131,10 +136,21 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     enabled: !!deal?.id
   });
   
-  // Filtra os estágios por pipeline
-  const filteredStages = pipelineStages.filter(stage => {
-    return pipelineId ? stage.pipelineId === parseInt(pipelineId) : true;
+  // Filtra os estágios por pipeline usando TODOS os estágios disponíveis
+  const filteredStages = allPipelineStages.filter(stage => {
+    return pipelineId ? stage.pipelineId === parseInt(pipelineId) : false;
   });
+  
+  // Limpar seleção de estágio quando o pipeline mudar
+  useEffect(() => {
+    if (pipelineId && deal) {
+      // Se mudou o pipeline, limpar o estágio selecionado
+      const currentPipelineId = parseInt(pipelineId);
+      if (deal.pipelineId !== currentPipelineId) {
+        setStageId(""); // Limpar estágio quando pipeline muda
+      }
+    }
+  }, [pipelineId, deal]);
   
   // Calcular o valor total da cotação quando os itens estiverem disponíveis
   useEffect(() => {
@@ -291,8 +307,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       }
       // Verificar se o estágio foi alterado e registrar atividade
       if (deal && stageId && deal.stageId !== parseInt(stageId)) {
-        const oldStageName = pipelineStages.find(s => s.id === deal.stageId)?.name || "Desconhecido";
-        const newStageName = pipelineStages.find(s => s.id === parseInt(stageId))?.name || "Desconhecido";
+        const oldStageName = allPipelineStages.find(s => s.id === deal.stageId)?.name || "Desconhecido";
+        const newStageName = allPipelineStages.find(s => s.id === parseInt(stageId))?.name || "Desconhecido";
         createActivityMutation.mutate({
           description: `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`,
           dealId: deal.id ?? 0,
@@ -373,15 +389,17 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     updateLeadMutation.mutate(leadUpdateData, {
       onSuccess: () => {
         const dealUpdate: Partial<Deal> = {
-          ...deal,
+          name,
+          value: parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0,
+          status,
+          pipelineId: parseInt(pipelineId),
+          stageId: parseInt(stageId),
           quoteCodeSao,
           quoteCodePara,
           notes,
         };
-        if (dealUpdate.id === undefined) delete dealUpdate.id;
-        if (dealUpdate.leadId === undefined) delete dealUpdate.leadId;
-        if (dealUpdate.stageId === undefined) delete dealUpdate.stageId;
-        if (dealUpdate.pipelineId === undefined) delete dealUpdate.pipelineId;
+        
+        console.log("Atualizando deal com:", dealUpdate);
         if (dealUpdate.userId === undefined) delete dealUpdate.userId;
         updateDealMutation.mutate(dealUpdate);
       }
