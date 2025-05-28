@@ -360,23 +360,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertDealSchema.partial().parse(req.body);
       
       // Lógica para mover automaticamente para estágios de vendas realizadas/perdidas
-      if (validatedData.saleStatus) {
-        // Buscar o pipeline padrão
-        const defaultPipeline = await storage.getDefaultPipeline();
-        if (defaultPipeline) {
-          // Buscar estágios do pipeline
-          const stages = await storage.getPipelineStages(defaultPipeline.id);
-          
-          // Encontrar estágios de vendas realizadas e perdidas
-          const wonStage = stages.find(stage => stage.stageType === 'completed');
-          const lostStage = stages.find(stage => stage.stageType === 'lost');
-          
-          // Mover para o estágio correto baseado no status da venda
-          if (validatedData.saleStatus === 'won' && wonStage) {
-            validatedData.stageId = wonStage.id;
-          } else if (validatedData.saleStatus === 'lost' && lostStage) {
-            validatedData.stageId = lostStage.id;
-          }
+      // APENAS se o saleStatus foi explicitamente definido E não há mudança manual de stageId
+      if (validatedData.saleStatus && !validatedData.stageId) {
+        // Buscar o pipeline atual do deal ou usar o pipeline padrão
+        const currentPipeline = existingDeal.pipelineId;
+        const stages = await storage.getPipelineStages(currentPipeline);
+        
+        // Encontrar estágios de vendas realizadas e perdidas no pipeline atual
+        const wonStage = stages.find(stage => stage.stageType === 'completed');
+        const lostStage = stages.find(stage => stage.stageType === 'lost');
+        
+        // Mover para o estágio correto baseado no status da venda
+        if (validatedData.saleStatus === 'won' && wonStage) {
+          validatedData.stageId = wonStage.id;
+        } else if (validatedData.saleStatus === 'lost' && lostStage) {
+          validatedData.stageId = lostStage.id;
         }
       }
       

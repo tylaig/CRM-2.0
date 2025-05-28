@@ -289,10 +289,17 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     try {
       console.log(`Movendo negócio ${dealId} para estágio ${destStage.id} no pipeline ${destStage.pipelineId}`);
       
-      await apiRequest(`/api/deals/${dealId}`, 'PUT', {
+      const updateData: any = {
         stageId: destStage.id,
         pipelineId: destStage.pipelineId
-      });
+      };
+      
+      // Se movendo para um estágio normal (não completed/lost), resetar saleStatus
+      if (destStage.stageType === "normal") {
+        updateData.saleStatus = "negotiation";
+      }
+      
+      await apiRequest(`/api/deals/${dealId}`, 'PUT', updateData);
       
       // Invalidar múltiplas chaves de cache para garantir atualização
       await Promise.all([

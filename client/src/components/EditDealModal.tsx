@@ -304,6 +304,19 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         data.value = selectedQuoteValue;
       }
       
+      // Se o usuário está mudando o pipeline ou estágio manualmente,
+      // resetar o saleStatus para 'negotiation' para permitir a movimentação
+      if ((data.pipelineId && data.pipelineId !== deal.pipelineId) || 
+          (data.stageId && data.stageId !== deal.stageId)) {
+        
+        // Verificar se o novo estágio não é do tipo completed/lost
+        const targetStage = allPipelineStages.find(s => s.id === data.stageId);
+        if (targetStage && targetStage.stageType === "normal") {
+          // Se movendo para um estágio normal, resetar o status de venda
+          data.saleStatus = "negotiation";
+        }
+      }
+      
       return apiRequest(`/api/deals/${deal.id}`, "PUT", data);
     },
     onSuccess: () => {
