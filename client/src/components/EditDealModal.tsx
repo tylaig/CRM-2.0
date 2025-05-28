@@ -138,24 +138,33 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   
   // Filtra os estágios por pipeline usando TODOS os estágios disponíveis
   const filteredStages = allPipelineStages.filter(stage => {
-    const result = pipelineId ? stage.pipelineId === parseInt(pipelineId) : false;
-    return result;
+    if (!pipelineId) return false;
+    const selectedPipelineId = parseInt(pipelineId);
+    if (isNaN(selectedPipelineId)) return false;
+    return stage.pipelineId === selectedPipelineId;
   });
   
   // Debug para verificar os estágios filtrados
   useEffect(() => {
-    console.log("Pipeline selecionado:", pipelineId);
+    console.log("=== DEBUG ESTÁGIOS ===");
+    console.log("Pipeline selecionado (string):", pipelineId);
+    console.log("Pipeline selecionado (number):", parseInt(pipelineId || ""));
+    console.log("Pipeline é válido:", pipelineId && !isNaN(parseInt(pipelineId)));
     console.log("Todos os estágios:", allPipelineStages.length);
+    console.log("Estágios por pipeline:", allPipelineStages.reduce((acc, stage) => {
+      acc[stage.pipelineId] = (acc[stage.pipelineId] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>));
     console.log("Estágios filtrados:", filteredStages.length);
     console.log("Estágios filtrados detalhes:", filteredStages.map(s => `${s.id}: ${s.name} (Pipeline ${s.pipelineId})`));
+    console.log("======================");
   }, [pipelineId, allPipelineStages, filteredStages]);
   
   // Limpar seleção de estágio quando o pipeline mudar
   useEffect(() => {
     if (pipelineId && deal) {
-      // Se mudou o pipeline, limpar o estágio selecionado
-      const currentPipelineId = parseInt(pipelineId);
-      if (deal.pipelineId !== currentPipelineId) {
+      const selectedPipelineId = parseInt(pipelineId);
+      if (!isNaN(selectedPipelineId) && deal.pipelineId !== selectedPipelineId) {
         setStageId(""); // Limpar estágio quando pipeline muda
       }
     }
