@@ -361,6 +361,9 @@ export default function Dashboard() {
             
             {activePipelineId && viewMode === "kanban" && (
               <div className="h-full overflow-auto">
+                {/* Debug: Verificar estágios antes de passar para KanbanBoard */}
+                {console.log("Dashboard - Pipeline stages sendo passados:", pipelineStages.length)}
+                {console.log("Dashboard - Pipeline ativo:", activePipelineId)}
                 <KanbanBoard 
                   pipelineStages={pipelineStages} 
                   filters={{ 

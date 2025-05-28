@@ -185,15 +185,22 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       
       console.log(`Fetched deals for pipeline ${activePipelineId}:`, dealsData.length);
       
+      // Debug: Verificar estágios disponíveis
+      console.log("Todos os estágios recebidos:", pipelineStages.length);
+      console.log("Pipeline ativo:", activePipelineId);
+      console.log("Estágios completos:", pipelineStages.map(s => ({ id: s.id, name: s.name, pipelineId: s.pipelineId })));
+      
       // Usar estágios dos props filtrados pelo pipeline ativo
       const currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
       console.log("Estágios do pipeline atual:", currentPipelineStages.length);
+      console.log("Estágios filtrados:", currentPipelineStages.map(s => ({ id: s.id, name: s.name, pipelineId: s.pipelineId })));
       
       // Preparar todos os negócios para processamento
       const processedDeals: { [id: number]: boolean } = {};
       
       if (currentPipelineStages.length === 0) {
         console.warn(`Nenhum estágio encontrado para o pipeline ${activePipelineId}`);
+        console.warn("Verificar se os estágios estão sendo carregados corretamente");
         setBoardData([]);
         return;
       }
