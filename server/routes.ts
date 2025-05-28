@@ -211,6 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deals = (await storage.getDeals()).filter((deal: any) => deal.userId === user.id);
         }
       }
+      
+      // Aplicar filtro adicional por pipelineId se especificado (garante que apenas deals do pipeline correto sejam retornados)
+      if (typeof pipelineId === 'number' && !isNaN(pipelineId)) {
+        deals = deals.filter((deal: any) => deal.pipelineId === pipelineId);
+      }
       // Enriquecer os deals com informações do lead e do usuário criador
       const enrichedDeals = await Promise.all(
         deals.map(async (deal: any) => {

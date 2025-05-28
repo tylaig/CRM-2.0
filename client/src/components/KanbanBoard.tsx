@@ -124,6 +124,9 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         let url = `/api/deals`;
         const params = new URLSearchParams();
         
+        // Adicionar filtro por pipeline diretamente na API
+        params.append('pipelineId', activePipelineId.toString());
+        
         if (filters) {
           if (filters.search) params.append('search', filters.search);
           if (filters.stageId) params.append('stageId', filters.stageId.toString());
@@ -147,19 +150,13 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           }
         }
         
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-        
-        const allDeals = await apiRequest(url, 'GET');
-        
-        // Filtrar deals apenas do pipeline ativo
-        dealsData = allDeals.filter((deal: Deal) => deal.pipelineId === activePipelineId);
-        
-        // Se userId foi fornecido, filtrar por usuário também
         if (userId) {
-          dealsData = dealsData.filter((deal: Deal) => deal.userId === userId);
+          params.append('userId', userId.toString());
         }
+        
+        url += `?${params.toString()}`;
+        
+        dealsData = await apiRequest(url, 'GET');
         
       } catch (error) {
         console.error("Error fetching deals:", error);
@@ -176,8 +173,11 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       // Preparar todos os negócios para processamento
       const processedDeals: { [id: number]: boolean } = {};
 
-      const stagesWithDeals = pipelineStages
-        .filter(stage => !stage.isHidden && stage.pipelineId === activePipelineId) // Só mostrar os estágios visíveis do pipeline ativo
+      // Buscar TODOS os estágios para garantir que encontremos os estágios corretos
+      const currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
+      
+      const stagesWithDeals = currentPipelineStages
+        .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
         .map((stage) => {
           // Filtrar negócios para este estágio, com tratamento especial para estágios de vendas realizadas/perdidas
           let stageDeals: Deal[] = [];

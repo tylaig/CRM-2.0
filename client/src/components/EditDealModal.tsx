@@ -319,7 +319,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       
       return apiRequest(`/api/deals/${deal.id}`, "PUT", data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Limpar a referência aos dados do lead
       leadUpdateDataRef.current = null;
       
@@ -349,8 +349,20 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         });
       }
       
-      // Invalidar consultas para atualizar a interface
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      // Invalidar múltiplas consultas para garantir atualização completa
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/deals"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/pipeline-stages"] }),
+        // Se mudou de pipeline, invalidar ambos os pipelines
+        deal?.pipelineId && pipelineId && deal.pipelineId !== parseInt(pipelineId) ? 
+          Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["/api/deals", deal.pipelineId] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/deals", parseInt(pipelineId)] })
+          ]) : Promise.resolve()
+      ]);
+      
+      // Forçar refetch para garantir dados atualizados
+      await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
       
       // Fechar o modal
       onClose();
