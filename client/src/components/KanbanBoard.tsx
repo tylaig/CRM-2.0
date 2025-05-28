@@ -114,14 +114,24 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   // Se userId for null ou undefined, mostrar todos (admin)
   const filteredDeals = userId ? deals.filter(d => d.userId === userId) : deals;
   
+  // Invalidar cache quando pipeline muda
+  useEffect(() => {
+    if (activePipelineId) {
+      queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+    }
+  }, [activePipelineId, queryClient]);
+  
   useEffect(() => {
     const fetchDeals = async () => {
       if (!activePipelineId) {
         console.log("Nenhum pipeline ativo, retornando");
+        setBoardData([]);
         return;
       }
+      
       console.log(`=== FETCH DEALS INICIADO PARA PIPELINE ${activePipelineId} ===`);
       console.log("Estágios disponíveis:", pipelineStages.length);
+      
       let dealsData: Deal[] = [];
       
       // Sempre buscar os deals atualizados do servidor para garantir dados frescos
@@ -175,23 +185,18 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       
       console.log(`Fetched deals for pipeline ${activePipelineId}:`, dealsData.length);
       
-      // Buscar estágios diretamente da API para garantir dados atualizados
-      let currentPipelineStages: PipelineStage[] = [];
-      try {
-        const allStages = await apiRequest('/api/pipeline-stages', 'GET');
-        currentPipelineStages = allStages.filter((stage: PipelineStage) => stage.pipelineId === activePipelineId);
-        console.log("Estágios buscados diretamente da API:", currentPipelineStages.length);
-      } catch (error) {
-        console.error("Erro ao buscar estágios da API, usando props:", error);
-        currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
-      }
+      // Usar estágios dos props filtrados pelo pipeline ativo
+      const currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
+      console.log("Estágios do pipeline atual:", currentPipelineStages.length);
       
       // Preparar todos os negócios para processamento
       const processedDeals: { [id: number]: boolean } = {};
       
-      console.log(`Pipeline ativo: ${activePipelineId}`);
-      console.log("Todos os estágios recebidos:", pipelineStages.length);
-      console.log("Estágios do pipeline atual:", currentPipelineStages.map(s => `${s.id}: ${s.name} (Pipeline ${s.pipelineId})`));
+      if (currentPipelineStages.length === 0) {
+        console.warn(`Nenhum estágio encontrado para o pipeline ${activePipelineId}`);
+        setBoardData([]);
+        return;
+      }
       
       const stagesWithDeals = currentPipelineStages
         .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
@@ -248,7 +253,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     };
     
     fetchDeals();
-  }, [pipelineStages, activePipelineId, filters, userId, toast]);
+  }, [activePipelineId, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
   
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
