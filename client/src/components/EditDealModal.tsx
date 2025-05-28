@@ -195,6 +195,12 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       setNotes(deal.notes || "");
       setQuoteCodeSao(deal.quoteCodeSao || "");
       setQuoteCodePara(deal.quoteCodePara || "");
+      
+      console.log("=== CARREGANDO DEAL NO MODAL ===");
+      console.log("Deal status:", deal.status);
+      console.log("Status definido:", deal.status || "in_progress");
+      console.log("Deal completo:", deal);
+      console.log("=================================");
     }
   }, [deal]);
   
@@ -449,7 +455,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     const dealUpdate: Partial<Deal> = {
       name,
       value: parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0,
-      status,
+      status: status || "in_progress", // Garantir que o status seja válido
       pipelineId: parseInt(pipelineId),
       stageId: parseInt(stageId),
       quoteCodeSao,
@@ -457,9 +463,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       notes,
     };
     
+    console.log("=== DEBUG ATUALIZAÇÃO DEAL ===");
+    console.log("Status original:", status);
+    console.log("Status final:", dealUpdate.status);
     console.log("Dados que serão enviados para atualização do deal:", dealUpdate);
     console.log("Pipeline atual:", deal.pipelineId, "-> Novo pipeline:", dealUpdate.pipelineId);
     console.log("Stage atual:", deal.stageId, "-> Novo stage:", dealUpdate.stageId);
+    console.log("================================");
     
     // Atualizar lead primeiro
     updateLeadMutation.mutate(leadUpdateData, {
