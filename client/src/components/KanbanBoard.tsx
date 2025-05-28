@@ -116,7 +116,12 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   
   useEffect(() => {
     const fetchDeals = async () => {
-      if (!activePipelineId) return;
+      if (!activePipelineId) {
+        console.log("Nenhum pipeline ativo, retornando");
+        return;
+      }
+      console.log(`=== FETCH DEALS INICIADO PARA PIPELINE ${activePipelineId} ===`);
+      console.log("Estágios disponíveis:", pipelineStages.length);
       let dealsData: Deal[] = [];
       
       // Sempre buscar os deals atualizados do servidor para garantir dados frescos
@@ -170,11 +175,23 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       
       console.log(`Fetched deals for pipeline ${activePipelineId}:`, dealsData.length);
       
+      // Buscar estágios diretamente da API para garantir dados atualizados
+      let currentPipelineStages: PipelineStage[] = [];
+      try {
+        const allStages = await apiRequest('/api/pipeline-stages', 'GET');
+        currentPipelineStages = allStages.filter((stage: PipelineStage) => stage.pipelineId === activePipelineId);
+        console.log("Estágios buscados diretamente da API:", currentPipelineStages.length);
+      } catch (error) {
+        console.error("Erro ao buscar estágios da API, usando props:", error);
+        currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
+      }
+      
       // Preparar todos os negócios para processamento
       const processedDeals: { [id: number]: boolean } = {};
-
-      // Buscar TODOS os estágios para garantir que encontremos os estágios corretos
-      const currentPipelineStages = pipelineStages.filter(stage => stage.pipelineId === activePipelineId);
+      
+      console.log(`Pipeline ativo: ${activePipelineId}`);
+      console.log("Todos os estágios recebidos:", pipelineStages.length);
+      console.log("Estágios do pipeline atual:", currentPipelineStages.map(s => `${s.id}: ${s.name} (Pipeline ${s.pipelineId})`));
       
       const stagesWithDeals = currentPipelineStages
         .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
@@ -223,7 +240,10 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           return a.order - b.order;
         });
       
+      console.log("=== RESULTADO FINAL ===");
+      console.log("Estágios filtrados (visíveis):", stagesWithDeals.length);
       console.log("Stages with deals:", stagesWithDeals.map(s => `${s.name} (${s.deals.length})`));
+      console.log("======================");
       setBoardData(stagesWithDeals);
     };
     
