@@ -19,10 +19,12 @@ import {
   XCircle,
   Car,
   BuildingIcon,
-  FileLineChart
+  FileLineChart,
+  UserIcon
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Settings as SettingsType, PipelineStage, LossReason, MachineBrand, SalePerformanceReason, Pipeline, MachineModel } from "@shared/schema";
+import { useAuth } from "@/components/AuthProvider";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState("chatwoot");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Consulta para carregar configurações
   const { data: settings } = useQuery<SettingsType>({
@@ -719,6 +722,61 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     });
   };
 
+  // --- Usuários ---
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
+    queryKey: ['/api/users'],
+    enabled: user?.role === 'admin',
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string; role: string }) => {
+      return await apiRequest('/api/users', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserRole('user');
+      toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao criar usuário', description: String(error), variant: 'destructive' });
+    }
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { id: number; role: string }) => {
+      return await apiRequest(`/api/users/${data.id}`, 'PUT', { role: data.role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      setEditingUserId(null);
+      toast({ title: 'Usuário atualizado', description: 'Permissão atualizada.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao atualizar usuário', description: String(error), variant: 'destructive' });
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/users/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({ title: 'Usuário excluído', description: 'Usuário removido com sucesso.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao excluir usuário', description: String(error), variant: 'destructive' });
+    }
+  });
+
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState('user');
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editingUserRole, setEditingUserRole] = useState('user');
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -733,7 +791,9 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </DialogHeader>
 
         <Tabs defaultValue="chatwoot" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-7 mb-4">
+          <TabsList
+            className="flex gap-2 px-2 py-1 bg-gray-100 rounded-lg overflow-x-auto items-center whitespace-nowrap"
+          >
             <TabsTrigger value="chatwoot" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
               Chatwoot
@@ -766,7 +826,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </svg>
               Desempenho
             </TabsTrigger>
-
+            {user?.role === 'admin' && (
+              <TabsTrigger value="users" className="flex items-center gap-1">
+                <UserIcon className="h-4 w-4" />
+                Usuários
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Aba Chatwoot */}
@@ -968,7 +1033,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                           variant="ghost" 
                                           size="sm"
                                           onClick={() => setEditingStage({ id: stage.id, name: stage.name })}
-                                          disabled={stage.isSystem}
+                                          disabled={!!stage.isSystem}
                                         >
                                           <Edit className="h-4 w-4" />
                                         </Button>
@@ -989,7 +1054,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                               deleteStageMutation.mutate(stage.id);
                                             }
                                           }}
-                                          disabled={stage.isSystem}
+                                          disabled={!!stage.isSystem}
                                         >
                                           <Trash2 className={`h-4 w-4 ${stage.isSystem ? 'text-muted-foreground' : 'text-red-500'}`} />
                                         </Button>
@@ -1468,7 +1533,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   value: reason.value,
                                   description: reason.description
                                 })}
-                                disabled={reason.isSystem}
+                                disabled={!!reason.isSystem}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1489,7 +1554,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     deletePerformanceReasonMutation.mutate(reason.id);
                                   }
                                 }}
-                                disabled={reason.isSystem}
+                                disabled={!!reason.isSystem}
                               >
                                 <Trash2 className={`h-4 w-4 ${reason.isSystem ? 'text-muted-foreground' : 'text-red-500'}`} />
                               </Button>
@@ -1646,6 +1711,83 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Aba Usuários */}
+          {user?.role === 'admin' && (
+            <TabsContent value="users">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <UserIcon className="h-5 w-5" />
+                    Gerenciamento de Usuários
+                  </CardTitle>
+                  <CardDescription>Crie, edite e remova usuários do sistema</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Formulário para novo usuário */}
+                  <form className="flex flex-col md:flex-row gap-2 mb-6" onSubmit={e => {e.preventDefault(); createUserMutation.mutate({ email: newUserEmail, password: newUserPassword, role: newUserRole });}}>
+                    <Input type="email" placeholder="E-mail" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} required className="flex-1" />
+                    <Input type="password" placeholder="Senha" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} required className="flex-1" />
+                    <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} className="rounded border px-2 py-1">
+                      <option value="user">Usuário</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <Button type="submit" disabled={createUserMutation.isPending}>Adicionar</Button>
+                  </form>
+                  {/* Listagem de usuários */}
+                  {isLoadingUsers ? (
+                    <div className="text-center py-8 text-muted-foreground">Carregando usuários...</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm border">
+                        <thead>
+                          <tr className="bg-muted">
+                            <th className="p-2 text-left">ID</th>
+                            <th className="p-2 text-left">E-mail</th>
+                            <th className="p-2 text-left">Permissão</th>
+                            <th className="p-2 text-left">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map(u => (
+                            <tr key={u.id} className="border-b">
+                              <td className="p-2">{u.id}</td>
+                              <td className="p-2">{u.email}</td>
+                              <td className="p-2">
+                                {editingUserId === u.id ? (
+                                  <select value={editingUserRole} onChange={e => setEditingUserRole(e.target.value)} className="rounded border px-2 py-1">
+                                    <option value="user">Usuário</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                ) : (
+                                  u.role === 'admin' ? <span className="text-yellow-600 font-bold">Admin</span> : 'Usuário'
+                                )}
+                              </td>
+                              <td className="p-2 flex gap-2">
+                                {editingUserId === u.id ? (
+                                  <>
+                                    <Button size="sm" variant="outline" onClick={() => updateUserMutation.mutate({ id: u.id, role: editingUserRole })}>Salvar</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setEditingUserId(null)}>Cancelar</Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button size="sm" variant="ghost" onClick={() => { setEditingUserId(u.id); setEditingUserRole(u.role); }}>Editar</Button>
+                                    {u.id !== user.id && (
+                                      <Button size="sm" variant="destructive" onClick={() => { if(window.confirm('Tem certeza que deseja excluir este usuário?')) deleteUserMutation.mutate(u.id); }}>Excluir</Button>
+                                    )}
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
     </Dialog>

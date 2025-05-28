@@ -7,50 +7,20 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  url: string,
-  method: string,
-  data?: unknown | undefined,
-): Promise<any> {
-  console.log(`API Request: ${method} ${url}`, data);
-  
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: data ? { "Content-Type": "application/json" } : {},
-      body: data ? JSON.stringify(data) : undefined,
-      credentials: "include",
-    });
-
-    // Log da resposta
-    console.log(`API Response status: ${res.status} ${res.statusText}`);
-    
-    try {
-      await throwIfResNotOk(res);
-      
-      // Para métodos que podem não retornar JSON (como DELETE)
-      if (method === "DELETE" || res.headers.get("content-length") === "0") {
-        return { success: true };
-      }
-      
-      // Tentar retornar o resultado como JSON
-      try {
-        const responseData = await res.json();
-        console.log(`API Response data:`, responseData);
-        return responseData;
-      } catch (e) {
-        console.log(`Não foi possível converter resposta para JSON`, e);
-        // Se não conseguir converter para JSON, retorna um objeto com success
-        return { success: true };
-      }
-    } catch (error) {
-      console.error(`API Error:`, error);
-      throw error;
-    }
-  } catch (error) {
-    console.error(`API Request Error (fetch failed):`, error);
-    throw error;
-  }
+export async function apiRequest(url: string, method: string = 'GET', body?: any) {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -88,8 +58,13 @@ export const getQueryFn: <T>(options: {
     
     console.log(`Fetching URL with params: ${url}`);
     
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(url, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

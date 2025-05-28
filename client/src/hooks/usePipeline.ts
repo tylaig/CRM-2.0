@@ -49,7 +49,6 @@ export function usePipeline(activePipelineId?: number | null) {
     staleTime: 0,                // Considerar dados obsoletos imediatamente (sempre buscar dados frescos)
     refetchOnMount: true,        // Recarregar quando o componente for montado
     refetchOnWindowFocus: true,  // Recarregar quando a janela ganhar foco
-    refetchInterval: 2000,       // Recarregar a cada 2 segundos para garantir dados atualizados
   });
   
   // Aplicar filtros e ordenação aos negócios

@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { PlusIcon } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 // A função formatPhoneNumber foi movida para lib/formatters.ts
 
@@ -84,6 +85,7 @@ export default function AddDealModal({ isOpen, onClose, pipelineStages = [], sel
   const [zipCode, setZipCode] = useState("");
   
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Get Chatwoot contacts
   const { data: contactsData, refetch: refetchContacts, isLoading: isLoadingContacts } = useQuery<{ payload: ChatwootContact[], meta: any }>({
@@ -306,7 +308,8 @@ export default function AddDealModal({ isOpen, onClose, pipelineStages = [], sel
           chatwootAgentName: null,
           chatwootConversationId: null,
           saleStatus: null,
-          quoteValue: null
+          quoteValue: null,
+          userId: user?.id // Adiciona o userId do usuário logado
         };
         
         console.log("Dados do deal a ser criado:", payload);

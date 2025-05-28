@@ -40,3 +40,6 @@ UPDATE deals SET pipeline_id = 1 WHERE pipeline_id IS NULL;
 
 -- Atualizar as configurações para usar o funil 1 como padrão
 UPDATE settings SET active_pipeline_id = 1 WHERE active_pipeline_id IS NULL;
+
+-- Adicionar coluna de ordenação na tabela de deals
+ALTER TABLE deals ADD COLUMN "order" integer DEFAULT 0;

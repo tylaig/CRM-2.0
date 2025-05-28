@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import * as os from 'os';
 
 const app = express();
 app.use(express.json());
@@ -56,15 +57,41 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // Permitir configuração via variáveis de ambiente
+  const port = process.env.PORT ? Number(process.env.PORT) : 5000;
+  const host = process.env.HOST || "0.0.0.0";
+  
+  try {
+    const server = app.listen(port, host, () => {
+      console.log(`Servidor iniciado em http://${host}:${port}`);
+      console.log(`Endereços de rede disponíveis:`);
+      const networkInterfaces = os.networkInterfaces();
+      Object.keys(networkInterfaces).forEach((interfaceName) => {
+        networkInterfaces[interfaceName]?.forEach((details: os.NetworkInterfaceInfo) => {
+          if (details.family === 'IPv4' && !details.internal) {
+            console.log(`- http://${details.address}:${port}`);
+          }
+        });
+      });
+    });
+
+    // Configurar timeout para conexões
+    server.setTimeout(120000); // 2 minutos
+    server.keepAliveTimeout = 61 * 1000;
+    server.headersTimeout = 65 * 1000;
+  } catch (error) {
+    console.error('Erro ao iniciar o servidor:', error);
+    process.exit(1);
+  }
+
+  // Adicionar tratamento de erro para o evento 'error'
+  server.on('error', (error: any) => {
+    console.error('Erro no servidor:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Porta ${port} já está em uso. Tente outra porta.`);
+    } else if (error.code === 'ENOTSUP') {
+      console.error('Erro: Não foi possível iniciar o servidor. Verifique as configurações de rede e permissões.');
+    }
+    process.exit(1);
   });
 })();

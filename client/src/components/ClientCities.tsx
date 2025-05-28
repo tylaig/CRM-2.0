@@ -99,6 +99,7 @@ export default function ClientCities({ dealId, leadId, isExisting, currentCity, 
   const [state, setState] = useState(currentState || "");
   const [displayedCities, setDisplayedCities] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(!isExisting);
+  const [otherCity, setOtherCity] = useState("");
   
   // Observe mudanças no estado para atualizar a lista de cidades
   useEffect(() => {
@@ -180,39 +181,28 @@ export default function ClientCities({ dealId, leadId, isExisting, currentCity, 
   
   // Função para salvar alterações
   const saveChanges = () => {
-    // Verifica se os campos são válidos
     if (!state) {
-      toast({
-        title: "Estado obrigatório",
-        description: "Selecione um estado.",
-        variant: "destructive",
-      });
+      toast({ title: "Estado obrigatório", description: "Selecione um estado.", variant: "destructive" });
       return;
     }
-    
-    if (!city) {
-      toast({
-        title: "Cidade obrigatória",
-        description: "Informe uma cidade.",
-        variant: "destructive",
-      });
+    const finalCity = city === "Outra" ? otherCity : city;
+    if (!finalCity) {
+      toast({ title: "Cidade obrigatória", description: "Informe uma cidade.", variant: "destructive" });
       return;
     }
-    
-    // Se for um deal existente, atualiza no servidor
     if (isExisting && dealId) {
-      updateCityMutation.mutate({ city, state });
+      updateCityMutation.mutate({ city: finalCity, state });
       return;
     }
-    
-    // Para um novo deal, apenas atualiza o callback
-    onCityChange(city, state);
+    onCityChange(finalCity, state);
     setIsEditing(false);
-    
-    toast({
-      title: "Localização definida",
-      description: `${city}, ${state} configurado com sucesso.`,
-    });
+    toast({ title: "Localização definida", description: `${finalCity}, ${state} configurado com sucesso.` });
+  };
+  
+  // Quando selecionar cidade
+  const handleCityChange = (value: string) => {
+    setCity(value);
+    if (value !== "Outra") setOtherCity("");
   };
   
   return (
@@ -259,7 +249,7 @@ export default function ClientCities({ dealId, leadId, isExisting, currentCity, 
                   {displayedCities.length > 0 ? (
                     <Select 
                       value={city}
-                      onValueChange={(value) => setCity(value)}
+                      onValueChange={handleCityChange}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a cidade" />
@@ -288,8 +278,8 @@ export default function ClientCities({ dealId, leadId, isExisting, currentCity, 
                   <label className="text-sm font-medium">Nome da cidade</label>
                   <Input 
                     placeholder="Digite o nome da cidade"
-                    value=""
-                    onChange={(e) => setCity(e.target.value)}
+                    value={otherCity}
+                    onChange={(e) => setOtherCity(e.target.value)}
                   />
                 </div>
               )}

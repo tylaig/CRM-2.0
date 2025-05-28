@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import type { Deal } from "@shared/schema";
 
 import { Card } from "@/components/ui/card";
 import { 
@@ -76,6 +77,8 @@ interface FilterOptions {
   sortOrder: string;
   hideClosed: boolean;
   stageId?: number | null;
+  winReason?: string | null;
+  lostReason?: string | null;
 }
 
 interface KanbanBoardProps {
@@ -83,6 +86,8 @@ interface KanbanBoardProps {
   filters?: FilterOptions;
   activePipelineId: number | null;
   onAddDeal: () => void; // Função para abrir o modal de adicionar negócio
+  deals?: any[]; // Aceita Deal[] ou ExtendedDeal[]
+  userId?: number | null;
 }
 
 interface StageWithDeals extends PipelineStage {
@@ -90,7 +95,7 @@ interface StageWithDeals extends PipelineStage {
   totalValue: number;
 }
 
-export default function KanbanBoard({ pipelineStages, filters, activePipelineId, onAddDeal }: KanbanBoardProps) {
+export default function KanbanBoard({ pipelineStages, filters, activePipelineId, onAddDeal, deals = [], userId }: KanbanBoardProps) {
   const [boardData, setBoardData] = useState<StageWithDeals[]>([]);
   const [isEditStageModalOpen, setIsEditStageModalOpen] = useState(false);
   const [isAddStageModalOpen, setIsAddStageModalOpen] = useState(false);
@@ -105,103 +110,117 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Buscar deals filtrados por userId se fornecido
+  // Se userId for null ou undefined, mostrar todos (admin)
+  const filteredDeals = userId ? deals.filter(d => d.userId === userId) : deals;
+  
   useEffect(() => {
     const fetchDeals = async () => {
       if (!activePipelineId) return;
-      
-      try {
-        let url = `/api/deals?pipelineId=${activePipelineId}`;
-        if (filters) {
-          if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-          if (filters.stageId) url += `&stageId=${filters.stageId}`;
-          if (filters.status && filters.status.length > 0) {
-            filters.status.forEach(status => {
-              url += `&status=${encodeURIComponent(status)}`;
-            });
-          }
-          
-          if (filters.sortOrder && filters.sortBy) {
-            url += `&sortBy=${filters.sortBy}&sortOrder=${filters.sortOrder}`;
-          }
-          
-          if (filters.hideClosed) {
-            url += `&hideClosed=true`;
-          }
-        }
-        
-        const deals: Deal[] = await apiRequest(url, 'GET');
-        
-        console.log("Fetched deals:", deals.length);
-        
-        // Preparar todos os negócios para processamento
-        const processedDeals: { [id: number]: boolean } = {};
-
-        const stagesWithDeals = pipelineStages
-          .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
-          .map((stage) => {
-            // Filtrar negócios para este estágio, com tratamento especial para estágios de vendas realizadas/perdidas
-            let stageDeals: Deal[] = [];
-            
-            if (stage.stageType === "completed") {
-              // Para estágio "Vendas Realizadas", mostrar TODOS os negócios com status "won",
-              // mesmo que estejam em outro estágio (será corrigido automaticamente)
-              stageDeals = deals.filter(deal => 
-                (deal.stageId === stage.id || deal.saleStatus === "won") &&
-                deal.pipelineId === stage.pipelineId
-              );
-            } else if (stage.stageType === "lost") {
-              // Para estágio "Vendas Perdidas", mostrar TODOS os negócios com status "lost",
-              // mesmo que estejam em outro estágio (será corrigido automaticamente)
-              stageDeals = deals.filter(deal => 
-                (deal.stageId === stage.id || deal.saleStatus === "lost") &&
-                deal.pipelineId === stage.pipelineId
-              );
-            } else {
-              // Para estágios normais, só mostrar negócios deste estágio que NÃO estão completos/perdidos
-              stageDeals = deals.filter(deal => 
-                deal.stageId === stage.id && 
-                deal.saleStatus !== "won" && 
-                deal.saleStatus !== "lost"
-              );
+      let dealsData: Deal[] = [];
+      if (filteredDeals) {
+        // Se receber deals via props, use-os diretamente
+        dealsData = filteredDeals;
+      } else {
+        // Caso contrário, buscar manualmente como antes
+        try {
+          let url = `/api/deals?pipelineId=${activePipelineId}`;
+          if (filters) {
+            if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+            if (filters.stageId) url += `&stageId=${filters.stageId}`;
+            if (filters.status && filters.status.length > 0) {
+              filters.status.forEach(status => {
+                url += `&status=${encodeURIComponent(status)}`;
+              });
             }
-            
-            // Marcar todos os negócios deste estágio como processados
-            stageDeals.forEach(deal => {
-              processedDeals[deal.id] = true;
-            });
-            
-            const totalValue = stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
-            
-            // Calcule o valor total do estágio
-            return {
-              ...stage,
-              deals: stageDeals,
-              totalValue
-            };
-          })
-          .sort((a, b) => {
-            // Ordenação especial para colocar estágios completados e perdidos por último
-            if (a.stageType === "completed" && b.stageType !== "completed") return 1;
-            if (a.stageType !== "completed" && b.stageType === "completed") return -1;
-            if (a.stageType === "lost" && b.stageType !== "lost") return 1;
-            if (a.stageType !== "lost" && b.stageType === "lost") return -1;
-            return a.order - b.order;
+            if (filters.sortOrder && filters.sortBy) {
+              url += `&sortBy=${filters.sortBy}&sortOrder=${filters.sortOrder}`;
+            }
+            if (filters.hideClosed) {
+              url += `&hideClosed=true`;
+            }
+            if (filters.winReason) {
+              url += `&winReason=${encodeURIComponent(filters.winReason)}`;
+            }
+            if (filters.lostReason) {
+              url += `&lostReason=${encodeURIComponent(filters.lostReason)}`;
+            }
+          }
+          dealsData = await apiRequest(url, 'GET');
+        } catch (error) {
+          console.error("Error fetching deals:", error);
+          toast({
+            title: "Erro ao carregar negócios",
+            description: "Não foi possível carregar os negócios.",
+            variant: "destructive",
           });
-        
-        console.log("Stages with deals:", stagesWithDeals.map(s => `${s.name} (${s.deals.length})`));
-        setBoardData(stagesWithDeals);
-      } catch (error) {
-        console.error("Error fetching deals:", error);
-        toast({
-          title: "Erro ao carregar negócios",
-          description: "Não foi possível carregar os negócios.",
-          variant: "destructive",
-        });
+          return;
+        }
       }
+      
+      console.log("Fetched deals:", dealsData.length);
+      
+      // Preparar todos os negócios para processamento
+      const processedDeals: { [id: number]: boolean } = {};
+
+      const stagesWithDeals = pipelineStages
+        .filter(stage => !stage.isHidden) // Só mostrar os estágios visíveis
+        .map((stage) => {
+          // Filtrar negócios para este estágio, com tratamento especial para estágios de vendas realizadas/perdidas
+          let stageDeals: Deal[] = [];
+          
+          if (stage.stageType === "completed") {
+            // Para estágio "Vendas Realizadas", mostrar TODOS os negócios com status "won",
+            // mesmo que estejam em outro estágio (será corrigido automaticamente)
+            stageDeals = dealsData.filter(deal => 
+              (deal.stageId === stage.id || deal.saleStatus === "won") &&
+              deal.pipelineId === stage.pipelineId
+            );
+          } else if (stage.stageType === "lost") {
+            // Para estágio "Vendas Perdidas", mostrar TODOS os negócios com status "lost",
+            // mesmo que estejam em outro estágio (será corrigido automaticamente)
+            stageDeals = dealsData.filter(deal => 
+              (deal.stageId === stage.id || deal.saleStatus === "lost") &&
+              deal.pipelineId === stage.pipelineId
+            );
+          } else {
+            // Para estágios normais, só mostrar negócios deste estágio que NÃO estão completos/perdidos
+            stageDeals = dealsData.filter(deal => 
+              deal.stageId === stage.id && 
+              deal.saleStatus !== "won" && 
+              deal.saleStatus !== "lost"
+            );
+          }
+          
+          // Marcar todos os negócios deste estágio como processados
+          stageDeals.forEach(deal => {
+            processedDeals[deal.id] = true;
+          });
+          
+          const totalValue = stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
+          
+          // Calcule o valor total do estágio
+          return {
+            ...stage,
+            deals: stageDeals,
+            totalValue
+          };
+        })
+        .sort((a, b) => {
+          // Ordenação especial para colocar estágios completados e perdidos por último
+          if (a.stageType === "completed" && b.stageType !== "completed") return 1;
+          if (a.stageType !== "completed" && b.stageType === "completed") return -1;
+          if (a.stageType === "lost" && b.stageType !== "lost") return 1;
+          if (a.stageType !== "lost" && b.stageType === "lost") return -1;
+          return a.order - b.order;
+        });
+      
+      console.log("Stages with deals:", stagesWithDeals.map(s => `${s.name} (${s.deals.length})`));
+      setBoardData(stagesWithDeals);
     };
     
     fetchDeals();
-  }, [pipelineStages, activePipelineId, filters, toast]);
+  }, [pipelineStages, activePipelineId, filters, filteredDeals, toast]);
   
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -249,14 +268,30 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     // Atualizar o estado local imediatamente para feedback visual
     setBoardData(updatedBoardData);
     
-    // Fazer a atualização no servidor
+    // Se for dentro do mesmo estágio, atualizar a ordem de todos os deals desse estágio
+    if (sourceStage.id === destStage.id) {
+      const orders = updatedBoardData[destBoardIndex].deals.map((d, idx) => ({ id: d.id, order: idx }));
+      try {
+        await apiRequest('/api/deals/order', 'PUT', { orders });
+        queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+      } catch (error) {
+        toast({
+          title: "Erro ao atualizar ordem",
+          description: "Não foi possível atualizar a ordem dos negócios.",
+          variant: "destructive",
+        });
+        fetchUpdatedData();
+      }
+      return;
+    }
+    
+    // Se for para outro estágio, atualizar o stageId e pipelineId
     try {
       await apiRequest(`/api/deals/${dealId}`, 'PUT', {
         stageId: destStage.id,
         pipelineId: destStage.pipelineId
       });
-      
-      queryClient.invalidateQueries(['/api/deals']);
+      queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
       toast({
         title: "Negócio movido",
         description: `"${deal.name}" foi movido para ${destStage.name}`,
@@ -268,13 +303,12 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         description: "Não foi possível atualizar o estágio do negócio.",
         variant: "destructive",
       });
-      // Reverter a alteração local em caso de erro
       fetchUpdatedData();
     }
   };
   
   const fetchUpdatedData = async () => {
-    queryClient.invalidateQueries(['/api/deals']);
+    queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
   };
   
   // Helper para gerar badges de status mais compactos
@@ -330,7 +364,13 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
               setIsEditDealModalOpen(false);
               setSelectedDeal(null);
             }}
-            deal={selectedDeal}
+            deal={{
+              order: null,
+              userId: 0,
+              quoteValue: null,
+              salePerformance: null,
+              ...selectedDeal
+            }}
             pipelineStages={pipelineStages}
             onSaved={() => {
               fetchUpdatedData();
@@ -358,9 +398,15 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
               setSelectedDeal(null);
               setTargetStageInfo({ id: 0, type: null });
             }}
-            deal={selectedDeal}
+            deal={{
+              order: null,
+              userId: 0,
+              quoteValue: null,
+              salePerformance: null,
+              ...selectedDeal
+            }}
             targetStageId={targetStageInfo.id}
-            targetStageType={targetStageInfo.type}
+            targetStageType={targetStageInfo.type as any}
           />
         )}
         
@@ -507,7 +553,6 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
                                   {deal.leadData?.name || "N/D"}
                                 </span>
                               </div>
-                              
                               <div className="flex items-center text-[9px] text-gray-600 dark:text-gray-400">
                                 <Building className="w-2.5 h-2.5 mr-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                 <span className="truncate">
@@ -515,7 +560,10 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
                                 </span>
                               </div>
                             </div>
-                            
+                            {/* Exibir e-mail do criador do negócio, se disponível */}
+                            {deal.creatorUserEmail && (
+                              <div className="text-[8px] text-gray-400 dark:text-gray-500 truncate mt-0.5" title={`Criado por: ${deal.creatorUserEmail}`}>Criado por: {deal.creatorUserEmail}</div>
+                            )}
                             <div className="flex items-center justify-between mt-0.5 pt-0.5 border-t border-gray-100 dark:border-gray-700">
                               <span className="text-[9px] text-gray-500 dark:text-gray-400 flex items-center">
                                 <CalendarIcon className="w-2.5 h-2.5 mr-0.5" />

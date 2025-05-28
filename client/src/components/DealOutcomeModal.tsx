@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Deal, LossReason } from '@shared/schema';
 type DealOutcomeModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  deal: Deal;
+  deal: Partial<Deal>;
   targetStageId: number;
   targetStageType: 'completed' | 'lost' | null;
 };
@@ -97,6 +97,15 @@ export default function DealOutcomeModal({ isOpen, onClose, deal, targetStageId,
     }
     return true;
   };
+
+  // Resetar estados ao abrir o modal ou mudar de negócio
+  useEffect(() => {
+    if (isOpen) {
+      setSalePerformance(null);
+      setLostReason(null);
+      setNotes('');
+    }
+  }, [isOpen, deal?.id, targetStageType]);
 
   // Renderizar formulário baseado no tipo de estágio
   const renderForm = () => {

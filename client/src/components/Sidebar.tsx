@@ -13,6 +13,7 @@ import {
   XCircleIcon,
   HistoryIcon,
 } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen }: SidebarProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
   
   return (
     <aside 
@@ -141,42 +143,46 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         </div>
         
         <div>
-          <h2 className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Configurações</h2>
-          <nav className="space-y-1">
-            <Link href="/settings">
-              <a className={cn(
-                "flex items-center px-3 py-2 text-sm rounded-md",
-                location === "/settings" 
-                  ? "bg-primary text-black font-medium" 
-                  : "text-white hover:bg-white/10 hover:text-primary"
-              )}>
-                <SettingsIcon className="w-5 h-5 mr-2" />
-                <span>Geral</span>
-              </a>
-            </Link>
-            <Link href="/pipeline-config">
-              <a className={cn(
-                "flex items-center px-3 py-2 text-sm rounded-md",
-                location === "/pipeline-config" 
-                  ? "bg-primary text-black font-medium" 
-                  : "text-white hover:bg-white/10 hover:text-primary"
-              )}>
-                <Map className="w-5 h-5 mr-2" />
-                <span>Etapas do Funil</span>
-              </a>
-            </Link>
-            <Link href="/chatwoot-integration">
-              <a className={cn(
-                "flex items-center px-3 py-2 text-sm rounded-md",
-                location === "/chatwoot-integration" 
-                  ? "bg-primary text-black font-medium" 
-                  : "text-white hover:bg-white/10 hover:text-primary"
-              )}>
-                <RefreshCwIcon className="w-5 h-5 mr-2" />
-                <span>Integração Chatwoot</span>
-              </a>
-            </Link>
-          </nav>
+          {user?.role === 'admin' && (
+            <>
+              <h2 className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Configurações</h2>
+              <nav className="space-y-1">
+                <Link href="/settings">
+                  <a className={cn(
+                    "flex items-center px-3 py-2 text-sm rounded-md",
+                    location === "/settings" 
+                      ? "bg-primary text-black font-medium" 
+                      : "text-white hover:bg-white/10 hover:text-primary"
+                  )}>
+                    <SettingsIcon className="w-5 h-5 mr-2" />
+                    <span>Geral</span>
+                  </a>
+                </Link>
+                <Link href="/pipeline-config">
+                  <a className={cn(
+                    "flex items-center px-3 py-2 text-sm rounded-md",
+                    location === "/pipeline-config" 
+                      ? "bg-primary text-black font-medium" 
+                      : "text-white hover:bg-white/10 hover:text-primary"
+                  )}>
+                    <Map className="w-5 h-5 mr-2" />
+                    <span>Etapas do Funil</span>
+                  </a>
+                </Link>
+                <Link href="/chatwoot-integration">
+                  <a className={cn(
+                    "flex items-center px-3 py-2 text-sm rounded-md",
+                    location === "/chatwoot-integration" 
+                      ? "bg-primary text-black font-medium" 
+                      : "text-white hover:bg-white/10 hover:text-primary"
+                  )}>
+                    <RefreshCwIcon className="w-5 h-5 mr-2" />
+                    <span>Integração Chatwoot</span>
+                  </a>
+                </Link>
+              </nav>
+            </>
+          )}
         </div>
       </div>
     </aside>

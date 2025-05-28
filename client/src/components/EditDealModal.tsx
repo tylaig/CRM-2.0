@@ -58,7 +58,7 @@ import RelatedDeals from "@/components/RelatedDeals";
 interface EditDealModalProps {
   isOpen: boolean;
   onClose: () => void;
-  deal: Deal | null;
+  deal: Partial<Deal> | null;
   pipelineStages: PipelineStage[];
 }
 
@@ -92,7 +92,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   const [stateRegistration, setStateRegistration] = useState("");
   
   // Campos de contato
-  const [clientCode, setClientCode] = useState("");
+  const [clientCodeSaoPaulo, setClientCodeSaoPaulo] = useState("");
+  const [clientCodePara, setClientCodePara] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   
@@ -150,12 +151,14 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   useEffect(() => {
     if (deal) {
       // Campos básicos do deal
-      setName(deal.name);
-      setPipelineId(deal.pipelineId.toString());
-      setStageId(deal.stageId.toString());
+      setName(deal.name || "");
+      setPipelineId(deal.pipelineId?.toString() || "");
+      setStageId(deal.stageId?.toString() || "");
       setValue(formatCurrency(deal.value || 0));
       setStatus(deal.status || "in_progress");
       setNotes(deal.notes || "");
+      setQuoteCodeSao(deal.quoteCodeSao || "");
+      setQuoteCodePara(deal.quoteCodePara || "");
     }
   }, [deal]);
   
@@ -181,7 +184,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       setStateRegistration(leadData.stateRegistration || "");
       
       // Campos de contato
-      setClientCode(leadData.clientCode || "");
+      setClientCodeSaoPaulo(leadData.clientCodeSaoPaulo || "");
+      setClientCodePara(leadData.clientCodePara || "");
       setEmail(leadData.email || "");
       setPhone(formatPhoneNumber(leadData.phone) || "");
       
@@ -216,25 +220,21 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     onSuccess: (updatedLead) => {
       console.log("Lead atualizado com sucesso:", updatedLead);
       queryClient.invalidateQueries({ queryKey: [`/api/leads/${deal?.leadId}`] });
-      
       // Após atualizar o lead com sucesso, atualizar o deal
       if (leadUpdateDataRef.current) {
-        const dealUpdateData: Partial<Deal> = {
-          name,
-          pipelineId: parseInt(pipelineId),
-          stageId: parseInt(stageId),
-          // Se temos um valor de cotação selecionado, use-o; caso contrário, use o valor do campo
-          value: selectedQuoteValue !== null 
-            ? selectedQuoteValue 
-            : parseFloat(value.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0,
-          // Sempre manter o quoteValue sincronizado com o valor quando o deal é atualizado
-          quoteValue: selectedQuoteValue !== null 
-            ? selectedQuoteValue 
-            : parseFloat(value.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0,
-          status,
+        const dealUpdate: Partial<Deal> = {
+          ...deal,
+          quoteCodeSao,
+          quoteCodePara,
           notes,
         };
-        updateDealMutation.mutate(dealUpdateData);
+        // Remover campos que podem ser undefined/null e não são obrigatórios
+        if (dealUpdate.id === undefined) delete dealUpdate.id;
+        if (dealUpdate.leadId === undefined) delete dealUpdate.leadId;
+        if (dealUpdate.stageId === undefined) delete dealUpdate.stageId;
+        if (dealUpdate.pipelineId === undefined) delete dealUpdate.pipelineId;
+        if (dealUpdate.userId === undefined) delete dealUpdate.userId;
+        updateDealMutation.mutate(dealUpdate);
       }
     },
     onError: (error) => {
@@ -283,22 +283,19 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       if (deal && pipelineId && deal.pipelineId !== parseInt(pipelineId)) {
         const oldPipelineName = pipelines.find(p => p.id === deal.pipelineId)?.name || "Desconhecido";
         const newPipelineName = pipelines.find(p => p.id === parseInt(pipelineId))?.name || "Desconhecido";
-        
         createActivityMutation.mutate({
           description: `Negócio movido do pipeline "${oldPipelineName}" para "${newPipelineName}"`,
-          dealId: deal.id,
+          dealId: deal.id ?? 0,
           activityType: "pipeline_change"
         });
       }
-      
       // Verificar se o estágio foi alterado e registrar atividade
       if (deal && stageId && deal.stageId !== parseInt(stageId)) {
         const oldStageName = pipelineStages.find(s => s.id === deal.stageId)?.name || "Desconhecido";
         const newStageName = pipelineStages.find(s => s.id === parseInt(stageId))?.name || "Desconhecido";
-        
         createActivityMutation.mutate({
           description: `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`,
-          dealId: deal.id,
+          dealId: deal.id ?? 0,
           activityType: "stage_change"
         });
       }
@@ -346,62 +343,49 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Função para manipular salvamento
   const handleSave = () => {
     if (!deal) return;
-    
-    // Usar o valor da cotação selecionada, se disponível
-    // Se não, usar o valor formatado no campo (caso seja um negócio existente sem cotação)
-    const parsedValue = selectedQuoteValue !== null 
-      ? selectedQuoteValue 
-      : parseFloat(value.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
-    
     // Preparar dados do lead para atualização
     const leadUpdateData: Partial<Lead> = {
       companyName,
-      
-      // Atualizar tipo de cliente
       clientCategory,
       clientType,
-      
-      // Campos específicos tipo de cliente
       cnpj: clientType === "company" ? cnpj : null,
       corporateName: clientType === "company" ? corporateName : null,
-      // Inscrição estadual agora é para ambos pessoa física e jurídica
       stateRegistration: stateRegistration,
       cpf: clientType === "person" ? cpf : null,
-      
-      // Dados de contato
-      clientCode,
+      clientCodeSaoPaulo,
+      clientCodePara,
       email,
       phone,
-      
-      // Dados de endereço
       address,
       addressNumber,
       addressComplement,
       neighborhood
-      // NÃO incluir city e state aqui para não sobrescrever os dados
-      // cidade e estado são gerenciados pelo componente ClientCities
-      // e devem ser preservados quando já existentes
     };
-    
-    // Incluir ZIP code, que não é gerenciado pelo componente ClientCities
     if (zipCode) {
       leadUpdateData.zipCode = zipCode;
     }
-    
-    // Salvar na ref para usar no callback de sucesso
     leadUpdateDataRef.current = leadUpdateData;
-    
-    // Mostrar feedback de carregamento
     toast({
       title: "Salvando...",
       description: "Atualizando informações...",
     });
-    
-    // Atualizar primeiro o lead
-    updateLeadMutation.mutate(leadUpdateData);
-    
-    // Nota: A atualização do deal será feita após o sucesso da atualização do lead
-    // ver o callback onSuccess no updateLeadMutation
+    // Garante que os valores mais recentes dos códigos de cotação sejam enviados
+    updateLeadMutation.mutate(leadUpdateData, {
+      onSuccess: () => {
+        const dealUpdate: Partial<Deal> = {
+          ...deal,
+          quoteCodeSao,
+          quoteCodePara,
+          notes,
+        };
+        if (dealUpdate.id === undefined) delete dealUpdate.id;
+        if (dealUpdate.leadId === undefined) delete dealUpdate.leadId;
+        if (dealUpdate.stageId === undefined) delete dealUpdate.stageId;
+        if (dealUpdate.pipelineId === undefined) delete dealUpdate.pipelineId;
+        if (dealUpdate.userId === undefined) delete dealUpdate.userId;
+        updateDealMutation.mutate(dealUpdate);
+      }
+    });
   };
   
   // Confirmar exclusão
@@ -437,6 +421,10 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     setSelectedQuoteValue(quoteTotal);
     setValue(formatCurrency(quoteTotal));
   };
+
+  // Campos para código de cotação
+  const [quoteCodeSao, setQuoteCodeSao] = useState("");
+  const [quoteCodePara, setQuoteCodePara] = useState("");
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -686,14 +674,25 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
                     </div>
                   )}
                   
-                  <div className="grid gap-2">
-                    <Label htmlFor="client-code">Código do Cliente</Label>
-                    <Input
-                      id="client-code"
-                      value={clientCode}
-                      onChange={(e) => setClientCode(e.target.value)}
-                      placeholder="Código do cliente no sistema"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="client-code-sp">Código Sisrev São Paulo</Label>
+                      <Input
+                        id="client-code-sp"
+                        value={clientCodeSaoPaulo}
+                        onChange={(e) => setClientCodeSaoPaulo(e.target.value)}
+                        placeholder="Código Sisrev São Paulo"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="client-code-pa">Código Sisrev Pará</Label>
+                      <Input
+                        id="client-code-pa"
+                        value={clientCodePara}
+                        onChange={(e) => setClientCodePara(e.target.value)}
+                        placeholder="Código Sisrev Pará"
+                      />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -811,7 +810,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
               {/* Sub-aba Máquinas */}
               <TabsContent value="machines" className="pt-2">
                 {deal && (
-                  <ClientMachines dealId={deal.id} isExisting={true} />
+                  <ClientMachines dealId={deal.id ?? null} isExisting={true} />
                 )}
               </TabsContent>
             </Tabs>
@@ -820,7 +819,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           {/* Tab Atividades */}
           <TabsContent value="activities" className="p-1">
             {deal && (
-              <LeadActivities deal={deal} />
+              <LeadActivities deal={deal as Deal} />
             )}
           </TabsContent>
 
@@ -844,6 +843,28 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           {/* Tab Cotação */}
           <TabsContent value="quote" className="p-1">
             {deal && (
+              <div className="mb-4 grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="quote-code-sao">Código Cotação SP</Label>
+                  <Input
+                    id="quote-code-sao"
+                    value={quoteCodeSao}
+                    onChange={e => setQuoteCodeSao(e.target.value)}
+                    placeholder="Código Cotação SP"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="quote-code-para">Código Cotação Pará</Label>
+                  <Input
+                    id="quote-code-para"
+                    value={quoteCodePara}
+                    onChange={e => setQuoteCodePara(e.target.value)}
+                    placeholder="Código Cotação Pará"
+                  />
+                </div>
+              </div>
+            )}
+            {deal && deal.id !== undefined && (
               <QuoteManager
                 dealId={deal.id}
                 onSelectQuote={handleQuoteSelected}
@@ -853,36 +874,23 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
 
           {/* Tab Resultado */}
           <TabsContent value="outcome" className="p-1">
-            {deal && (
-              <>
-                {/* Se o negócio já tem status de ganho ou perdido, mostrar tela de visualização e edição */}
-                {(deal.saleStatus === "won" || deal.saleStatus === "lost") ? (
-                  <DealResultTab deal={deal} />
-                ) : (
-                  /* Caso contrário, mostrar formulário para definir o resultado */
-                  <DealOutcomeForm
-                    deal={deal}
-                    onSuccess={() => {
-                      // Após marcar como ganho ou perdido, removemos do pipeline atualizando o stageId
-                      if (deal.status === "won" || deal.status === "lost") {
-                        // Removemos do pipeline marcando com um estágio especial
-                        // Obtemos o primeiro estágio oculto ou o primeiro da lista
-                        const hiddenStage = pipelineStages.find(s => s.isHidden) || pipelineStages[0];
-                        
-                        if (hiddenStage) {
-                          updateDealMutation.mutate({
-                            stageId: hiddenStage.id // Move para estágio oculto
-                          });
-                        }
-                      }
-                      
-                      // Atualizar query para refletir mudanças
-                      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-                      onClose();
-                    }}
-                  />
-                )}
-              </>
+            {deal && deal.id !== undefined && deal.leadId !== undefined && deal.stageId !== undefined && deal.pipelineId !== undefined && deal.userId !== undefined && (
+              (deal.saleStatus === "won" || deal.saleStatus === "lost") ? (
+                <DealResultTab deal={deal as Deal} />
+              ) : (
+                <DealOutcomeForm deal={deal as Deal} onSuccess={() => {
+                  if (deal.status === "won" || deal.status === "lost") {
+                    const hiddenStage = pipelineStages.find(s => s.isHidden) || pipelineStages[0];
+                    if (hiddenStage) {
+                      updateDealMutation.mutate({
+                        stageId: hiddenStage.id
+                      });
+                    }
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+                  onClose();
+                }} />
+              )
             )}
           </TabsContent>
         </Tabs>

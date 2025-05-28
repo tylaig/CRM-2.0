@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import SettingsModal from "./SettingsModal";
 import PipelineSelector from "./PipelineSelector";
 import { toast } from "@/hooks/use-toast";
 import tbcLogo from "../assets/tbc-logo.png";
+import { useAuth } from "@/components/AuthProvider";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -48,6 +48,7 @@ export default function Header({
 }: HeaderProps) {
   const [location] = useLocation();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const { user, logout } = useAuth();
   return (
     <header className="bg-[hsl(var(--header-background))] text-[hsl(var(--header-foreground))] border-b border-[hsl(var(--header-border))]">
       <div className="container mx-auto px-4">
@@ -69,58 +70,31 @@ export default function Header({
           </div>
           
           <div className="flex items-center gap-2">
-            
-            {hasApiConfig && (
-              <>
-                {/* Botão para telas maiores com texto */}
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  className="relative group text-white hover:text-primary hover:bg-white/10 hidden sm:flex"
-                  onClick={() => setIsSettingsModalOpen(true)}
-                >
-                  <SettingsIcon className="h-4 w-4 text-white group-hover:text-primary transition-colors" />
-                  <span className="ml-2 text-sm font-medium">Configurações</span>
-                </Button>
-                
-                {/* Botão para telas menores apenas com ícone */}
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  className="relative group text-white hover:text-primary hover:bg-white/10 sm:hidden h-9 w-9"
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  title="Configurações"
-                >
-                  <SettingsIcon className="h-4 w-4 text-white group-hover:text-primary transition-colors" />
-                </Button>
-              </>
+            {/* E-mail do usuário sempre visível */}
+            {user && (
+              <span className="text-xs text-white bg-black/30 px-2 py-1 rounded-md mr-2">{user.email}</span>
             )}
-            
-            {!hasApiConfig && (
-              <>
-                {/* Botão para telas maiores com texto */}
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  className="group text-white hover:text-primary hover:bg-white/10 hidden sm:flex"
-                  onClick={onOpenApiConfig}
-                >
-                  <KeyIcon className="h-4 w-4 text-white group-hover:text-primary transition-colors" />
-                  <span className="ml-2 text-sm font-medium">Configurar API</span>
-                </Button>
-                
-                {/* Botão para telas menores apenas com ícone */}
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  className="group text-white hover:text-primary hover:bg-white/10 sm:hidden h-9 w-9"
-                  onClick={onOpenApiConfig}
-                  title="Configurar API"
-                >
-                  <KeyIcon className="h-4 w-4 text-white group-hover:text-primary transition-colors" />
-                </Button>
-              </>
+            {/* Botão de configurações só para admin */}
+            {hasApiConfig && user?.role === 'admin' && (
+              <Button 
+                variant="ghost"
+                size="sm"
+                className="relative group text-white hover:text-primary hover:bg-white/10 hidden sm:flex"
+                onClick={() => setIsSettingsModalOpen(true)}
+              >
+                <SettingsIcon className="h-4 w-4 text-white group-hover:text-primary transition-colors" />
+                <span className="ml-2">Configurações</span>
+              </Button>
             )}
+            {/* Botão de logout sempre visível */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-primary hover:bg-white/10"
+              onClick={logout}
+            >
+              Sair
+            </Button>
           </div>
         </div>
       
