@@ -32,7 +32,7 @@ export function usePipeline(activePipelineId?: number | null) {
     status: [],
     sortBy: "date",
     sortOrder: "desc",
-    hideClosed: true // Por padrão, escondemos negócios fechados (vendidos ou perdidos)
+    hideClosed: false // Alterado para false para mostrar todos os negócios incluindo Won/Lost
   });
   
   // Buscar negócios com configurações para garantir atualização imediata
