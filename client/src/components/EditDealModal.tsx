@@ -342,6 +342,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Limpar a referência aos dados do lead
       leadUpdateDataRef.current = null;
       
+      // Parar a proteção de edição para permitir que os dados atualizados sejam carregados
+      setIsEditingNotes(false);
+      if (typingTimeout.current) {
+        clearTimeout(typingTimeout.current);
+        typingTimeout.current = null;
+      }
+      
       toast({
         title: "Sucesso!",
         description: "Informações atualizadas com sucesso.",
@@ -371,6 +378,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Invalidar múltiplas consultas para garantir atualização completa
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/deals"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/deals", deal?.id] }),
         queryClient.invalidateQueries({ queryKey: ["/api/pipeline-stages"] }),
         // Se mudou de pipeline, invalidar ambos os pipelines
         deal?.pipelineId && pipelineId && deal.pipelineId !== parseInt(pipelineId) ? 
@@ -380,8 +388,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           ]) : Promise.resolve()
       ]);
       
-      // Forçar refetch para garantir dados atualizados
-      await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
+      // Forçar refetch imediato dos dados específicos do deal
+      await refetchDealData();
       
       // Fechar o modal
       onClose();
@@ -529,7 +537,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     setNotes(e.target.value);
     setIsEditingNotes(true);
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
-    typingTimeout.current = setTimeout(() => setIsEditingNotes(false), 2000);
+    // Aumentar o tempo para 10 segundos para dar tempo suficiente para salvar
+    typingTimeout.current = setTimeout(() => setIsEditingNotes(false), 10000);
   };
 
   // Pooling: buscar o deal atualizado do backend enquanto o modal estiver aberto
