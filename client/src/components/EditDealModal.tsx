@@ -192,7 +192,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       setStageId(deal.stageId?.toString() || "");
       setValue(formatCurrency(deal.value || 0));
       setStatus(deal.status || "in_progress");
-      setNotes(deal.notes || "");
+      // Não atualizar as notas aqui para evitar sobrescrever edições
       setQuoteCodeSao(deal.quoteCodeSao || "");
       setQuoteCodePara(deal.quoteCodePara || "");
       // ... outros campos se necessário
