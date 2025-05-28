@@ -183,10 +183,10 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     }
   }, [quoteItems]);
 
-  // Carregar dados do deal quando o modal abrir
+  // Carregar dados do deal quando o modal abrir ou quando o deal mudar
   useEffect(() => {
-    if (deal) {
-      // Campos básicos do deal
+    if (isOpen && deal) {
+      console.log('DEBUG MODAL: deal recebido', deal);
       setName(deal.name || "");
       setPipelineId(deal.pipelineId?.toString() || "");
       setStageId(deal.stageId?.toString() || "");
@@ -195,14 +195,14 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       setNotes(deal.notes || "");
       setQuoteCodeSao(deal.quoteCodeSao || "");
       setQuoteCodePara(deal.quoteCodePara || "");
-      
+      // ... outros campos se necessário
       console.log("=== CARREGANDO DEAL NO MODAL ===");
       console.log("Deal status:", deal.status);
       console.log("Status definido:", deal.status || "in_progress");
       console.log("Deal completo:", deal);
       console.log("=================================");
     }
-  }, [deal]);
+  }, [isOpen, deal]);
   
   // Carregar dados do lead quando estiverem disponíveis
   useEffect(() => {
@@ -521,6 +521,41 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Campos para código de cotação
   const [quoteCodeSao, setQuoteCodeSao] = useState("");
   const [quoteCodePara, setQuoteCodePara] = useState("");
+
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNotes(e.target.value);
+    setIsEditingNotes(true);
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => setIsEditingNotes(false), 2000);
+  };
+
+  // Pooling: buscar o deal atualizado do backend enquanto o modal estiver aberto
+  const {
+    data: dealDataFromApi,
+    refetch: refetchDealData,
+  } = useQuery<Deal | null>({
+    queryKey: ["/api/deals", deal?.id],
+    queryFn: () => deal?.id ? apiRequest(`/api/deals/${deal.id}`, "GET") : null,
+    enabled: isOpen && !!deal?.id,
+    refetchInterval: isOpen && !!deal?.id ? 3000 : false, // 3 segundos
+  });
+
+  // Atualizar o campo notes sempre que o deal do backend mudar, mas só se não estiver editando
+  useEffect(() => {
+    if (dealDataFromApi && !isEditingNotes) {
+      setNotes((dealDataFromApi as Deal).notes || "");
+    }
+  }, [dealDataFromApi, isEditingNotes]);
+
+  // Atualizar o campo notes imediatamente ao abrir o modal para um novo negócio
+  useEffect(() => {
+    if (isOpen && deal && !isEditingNotes) {
+      setNotes(deal.notes || "");
+    }
+  }, [isOpen, deal?.id]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -930,7 +965,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
                   className="flex h-32 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Adicione notas e observações sobre este negócio..."
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={handleNotesChange}
                 />
               </div>
             </div>
