@@ -1766,25 +1766,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use("/api", apiRouter);
   
-  const httpServer = createServer(app);
-  
-  // Configurar WebSocket Server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('Cliente WebSocket conectado');
-    wsClients.add(ws);
-    
-    ws.on('close', () => {
-      console.log('Cliente WebSocket desconectado');
-      wsClients.delete(ws);
-    });
-    
-    ws.on('error', (error) => {
-      console.error('Erro WebSocket:', error);
-      wsClients.delete(ws);
-    });
-  });
-  
-  return httpServer;
+  return app;
 }

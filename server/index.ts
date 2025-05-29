@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import * as os from 'os';
+import { createServer } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 
 const app = express();
 app.use(express.json());
@@ -62,7 +64,7 @@ app.use((req, res, next) => {
   const host = process.env.HOST || "0.0.0.0";
   
   try {
-    const server = app.listen(port, host, () => {
+    server.listen(port, host, () => {
       console.log(`Servidor iniciado em http://${host}:${port}`);
       console.log(`Endereços de rede disponíveis:`);
       const networkInterfaces = os.networkInterfaces();
@@ -75,6 +77,7 @@ app.use((req, res, next) => {
       });
     });
 
+    // Configurar timeout para conexões
     // Configurar timeout para conexões
     server.setTimeout(120000); // 2 minutos
     server.keepAliveTimeout = 61 * 1000;
