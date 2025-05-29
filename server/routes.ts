@@ -387,6 +387,39 @@ export async function registerRoutes(app: Express): Promise<Express> {
         // Se recebemos novo stageId, atualizamos o estágio
         if (stageId !== undefined) {
           updateData.stageId = stageId;
+          
+          // Registrar atividade de mudança de etapa
+          if (existingDeal.stageId !== stageId) {
+            const allStages = await storage.getPipelineStages();
+            const oldStage = allStages.find(s => s.id === existingDeal.stageId);
+            const newStage = allStages.find(s => s.id === stageId);
+            
+            await logActivity(
+              targetId,
+              'stage_change',
+              `Negócio movido da etapa "${oldStage?.name || 'Desconhecido'}" para "${newStage?.name || 'Desconhecido'}"`
+            );
+          }
+          
+          // Verificar se houve mudança de pipeline também
+          if (updateData.stageId) {
+            const allStages = await storage.getPipelineStages();
+            const newStage = allStages.find(s => s.id === updateData.stageId);
+            if (newStage && newStage.pipelineId !== existingDeal.pipelineId) {
+              const pipelines = await storage.getPipelines();
+              const oldPipeline = pipelines.find(p => p.id === existingDeal.pipelineId);
+              const newPipeline = pipelines.find(p => p.id === newStage.pipelineId);
+              
+              // Atualizar o pipeline do deal
+              updateData.pipelineId = newStage.pipelineId;
+              
+              await logActivity(
+                targetId,
+                'pipeline_change',
+                `Negócio movido do pipeline "${oldPipeline?.name || 'Desconhecido'}" para "${newPipeline?.name || 'Desconhecido'}"`
+              );
+            }
+          }
         }
         
         const updatedDeal = await storage.updateDeal(targetId, updateData);
@@ -418,8 +451,32 @@ export async function registerRoutes(app: Express): Promise<Express> {
         // Mover para o estágio correto baseado no status da venda
         if (validatedData.saleStatus === 'won' && wonStage) {
           validatedData.stageId = wonStage.id;
+          
+          // Registrar atividade de venda realizada
+          const reasonText = validatedData.salePerformanceReasonId ? 
+            ` (${await storage.getSalePerformanceReasons().then(reasons => 
+              reasons.find(r => r.id === validatedData.salePerformanceReasonId)?.reason || 'Motivo não especificado'
+            )})` : '';
+          
+          await logActivity(
+            targetId,
+            'sale_won',
+            `Negócio marcado como Venda Realizada${reasonText}`
+          );
         } else if (validatedData.saleStatus === 'lost' && lostStage) {
           validatedData.stageId = lostStage.id;
+          
+          // Registrar atividade de venda perdida
+          const reasonText = validatedData.lossReasonId ? 
+            ` (${await storage.getLossReasons().then(reasons => 
+              reasons.find(r => r.id === validatedData.lossReasonId)?.reason || 'Motivo não especificado'
+            )})` : '';
+          
+          await logActivity(
+            targetId,
+            'sale_lost',
+            `Negócio marcado como Venda Perdida${reasonText}`
+          );
         }
       }
       
