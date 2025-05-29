@@ -591,12 +591,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
       let allContacts = [];
       
       // Primeiro, tentar buscar com per_page=100 para pegar mais contatos
+      // Adicionar timestamp para evitar cache
       try {
-        const largePageUrl = `${chatwootApiUrl}?per_page=100&page=1`;
+        const timestamp = Date.now();
+        const largePageUrl = `${chatwootApiUrl}?per_page=100&page=1&_t=${timestamp}`;
         console.log(`Fetching large page: ${largePageUrl}`);
         
         const largeResponse = await axios.get(largePageUrl, {
-          headers: { 'api_access_token': finalApiKey }
+          headers: { 
+            'api_access_token': finalApiKey,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         });
         
         if (largeResponse.data?.payload) {

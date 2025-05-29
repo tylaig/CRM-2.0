@@ -96,15 +96,27 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
       // Obter nome do contato da estrutura correta da resposta
       const contactName = data.contact?.payload?.contact?.name || data.contact?.name || "contato";
       
-      // Aguardar um pouco para que o Chatwoot processe o contato
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aguardar mais tempo para que o Chatwoot processe o contato
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Limpar cache completamente e recarregar
+      // Invalidação completa e múltipla do cache
       queryClient.removeQueries({ queryKey: ['/api/chatwoot/contacts'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts'] });
+      queryClient.removeQueries({ queryKey: ['/api/chatwoot/contacts', searchTerm] });
+      queryClient.removeQueries({ queryKey: ['/api/chatwoot/contacts', ''] });
       
-      // Forçar refetch imediato
+      // Aguardar um pouco antes de invalidar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts', searchTerm] });
+      
+      // Forçar refetch com nova timestamp
       await refetch();
+      
+      // Aguardar e fazer mais um refetch para garantir
+      setTimeout(async () => {
+        await refetch();
+      }, 1000);
       
       toast({
         title: "Contato criado com sucesso",
