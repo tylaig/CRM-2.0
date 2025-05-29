@@ -334,6 +334,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // CORREÇÃO: Atualizar imediatamente as notas locais com os dados salvos
       if (updatedDeal && updatedDeal.notes !== undefined) {
         setNotes(updatedDeal.notes || "");
+        setLatestNotesFromDB(updatedDeal.notes || "");
         console.log("✅ Notas atualizadas localmente:", updatedDeal.notes);
       }
       
