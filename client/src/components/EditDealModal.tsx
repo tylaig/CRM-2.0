@@ -609,6 +609,17 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     refetchInterval: isOpen && !!deal?.id ? 3000 : false, // 3 segundos
   });
 
+  // Limpeza de cache ao abrir modal para garantir dados sempre atualizados
+  useEffect(() => {
+    if (isOpen && deal?.id) {
+      console.log("🧹 LIMPANDO CACHE AO ABRIR MODAL...");
+      // Limpar cache imediatamente quando modal abre
+      queryClient.removeQueries({ queryKey: ['/api/deals', deal.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/deals', deal.id] });
+      console.log("✅ Cache limpo ao abrir modal");
+    }
+  }, [isOpen, deal?.id]);
+
   // Sistema de preservação de dados digitados pelo usuário
   useEffect(() => {
     if (isOpen && deal) {
@@ -623,32 +634,18 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Armazenar sempre as notas mais recentes do banco para comparação
       setLatestNotesFromDB(latestNotesFromDatabase || "");
       
-      // 🔒 NOVA ESTRATÉGIA: PRESERVAR SEMPRE O QUE O USUÁRIO DIGITOU
-      // Só sincronizar na primeira vez que o modal abre (quando notes está vazio)
-      if (notes === "" && latestNotesFromDatabase) {
-        console.log("✅ PRIMEIRA SINCRONIZAÇÃO (campo vazio):", latestNotesFromDatabase);
+      // 🔒 ESTRATÉGIA MELHORADA: Sempre usar dados mais recentes do banco quando o modal abre
+      if (notes === "" || notes !== latestNotesFromDatabase) {
+        console.log("🔄 SINCRONIZANDO com dados mais recentes:", latestNotesFromDatabase);
         setNotes(latestNotesFromDatabase);
         setShowRefreshButton(false);
       } else {
-        // Verificar se há diferenças para mostrar botão de atualização
-        const hasDifferences = notes !== latestNotesFromDatabase && 
-                              latestNotesFromDatabase !== "" && 
-                              notes !== "" &&
-                              !isEditingNotes;
-        setShowRefreshButton(hasDifferences);
-        
-        if (hasDifferences) {
-          console.log("🔔 DIFERENÇAS DETECTADAS - mostrando botão:");
-          console.log("- Campo atual:", `"${notes}"`);
-          console.log("- Banco de dados:", `"${latestNotesFromDatabase}"`);
-        } else {
-          console.log("✅ Campo preservado - nenhuma ação necessária");
-        }
+        console.log("✅ Campo já sincronizado - nenhuma ação necessária");
       }
       
       console.log("======================================");
     }
-  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
+  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
