@@ -608,12 +608,23 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       if (!isEditingNotes) {
         setNotes(latestNotesFromDatabase || "");
         setShowRefreshButton(false);
-      } else {
-        // Se estiver editando, verificar se há diferenças
-        const hasDifferences = notes !== latestNotesFromDatabase && latestNotesFromDatabase !== "";
-        setShowRefreshButton(hasDifferences);
-        console.log("Diferenças detectadas (editando):", hasDifferences);
       }
+      
+      // Verificar se há diferenças entre o que está no campo e o que está no banco
+      // Mostrar botão apenas se:
+      // 1. Não estiver editando ativamente E
+      // 2. Os valores forem diferentes E
+      // 3. Ambos os valores não estiverem vazios
+      const hasRealDifferences = !isEditingNotes && 
+                                notes !== latestNotesFromDatabase && 
+                                latestNotesFromDatabase !== "" && 
+                                notes !== "";
+      setShowRefreshButton(hasRealDifferences);
+      console.log("🔍 Verificação de diferenças:");
+      console.log("- isEditingNotes:", isEditingNotes);
+      console.log("- notes campo:", `"${notes}"`);
+      console.log("- latestNotesFromDatabase:", `"${latestNotesFromDatabase}"`);
+      console.log("- hasRealDifferences:", hasRealDifferences);
       
       console.log("===================================");
     }
