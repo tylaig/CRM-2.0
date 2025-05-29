@@ -587,57 +587,33 @@ export async function registerRoutes(app: Express): Promise<Express> {
         return res.json(response.data);
       }
       
-      // Buscar todos os contatos possíveis do Chatwoot
+      // Buscar contatos do Chatwoot de forma simples e direta
       let allContacts = [];
       
-      // Primeiro, tentar buscar com per_page=100 para pegar mais contatos
-      // Adicionar timestamp para evitar cache
       try {
-        const timestamp = Date.now();
-        const largePageUrl = `${chatwootApiUrl}?per_page=100&page=1&sort=created_at&order=desc&_t=${timestamp}`;
-        console.log(`Fetching large page: ${largePageUrl}`);
+        console.log(`Fetching contacts from: ${chatwootApiUrl}`);
         
-        const largeResponse = await axios.get(largePageUrl, {
+        const response = await axios.get(chatwootApiUrl, {
           headers: { 
-            'api_access_token': finalApiKey,
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'api_access_token': finalApiKey
+          },
+          params: {
+            per_page: 100
           }
         });
         
-        if (largeResponse.data?.payload) {
-          allContacts = largeResponse.data.payload;
-          console.log(`Fetched ${allContacts.length} contacts with large page request`);
+        if (response.data?.payload) {
+          allContacts = response.data.payload;
+          console.log(`Fetched ${allContacts.length} contacts successfully`);
+        } else {
+          console.log("No payload in response:", response.data);
         }
       } catch (error) {
-        console.log("Large page request failed, trying standard pagination");
-        
-        // Fallback: buscar páginas normais
-        let currentPage = 1;
-        const maxPages = 5; // Buscar até 5 páginas
-        
-        while (currentPage <= maxPages) {
-          try {
-            const pageUrl = `${chatwootApiUrl}?page=${currentPage}&per_page=25`;
-            console.log(`Fetching page ${currentPage}: ${pageUrl}`);
-            
-            const response = await axios.get(pageUrl, {
-              headers: { 'api_access_token': finalApiKey }
-            });
-            
-            if (response.data?.payload && response.data.payload.length > 0) {
-              allContacts.push(...response.data.payload);
-              console.log(`Page ${currentPage}: ${response.data.payload.length} contacts`);
-              currentPage++;
-            } else {
-              console.log(`Page ${currentPage}: No more contacts, stopping`);
-              break;
-            }
-          } catch (pageError) {
-            console.log(`Error fetching page ${currentPage}:`, pageError.response?.data);
-            break;
-          }
-        }
+        console.log("Error fetching contacts:", error.response?.data || error.message);
+        return res.status(500).json({ 
+          message: "Failed to fetch contacts from Chatwoot",
+          error: error.response?.data || error.message
+        });
       }
       
       // Remover duplicatas baseado no ID
