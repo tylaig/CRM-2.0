@@ -172,15 +172,11 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
     };
   }
   
-  // Buscar contatos do Chatwoot quando há uma configuração válida
+  // Buscar contatos do Chatwoot quando há uma configuração válida (sem o searchTerm na queryKey)
   const { data: chatwootResponse, isLoading, refetch } = useQuery<ChatwootResponse>({
-    queryKey: ['/api/chatwoot/contacts', searchTerm],
+    queryKey: ['/api/chatwoot/contacts'],
     queryFn: async () => {
-      let url = '/api/chatwoot/contacts';
-      if (searchTerm && searchTerm.trim()) {
-        url += `?q=${encodeURIComponent(searchTerm.trim())}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch('/api/chatwoot/contacts');
       if (!response.ok) {
         throw new Error('Erro ao buscar contatos do Chatwoot');
       }
@@ -192,18 +188,27 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
   // Extrair o array de contatos da resposta
   const allChatwootContacts = chatwootResponse?.payload || [];
   
-  // Filtrar contatos por nome, email ou telefone localmente
+  // Filtrar contatos por nome, email ou telefone localmente com busca fuzzy
   const chatwootContacts = useMemo(() => {
     if (!searchTerm || !searchTerm.trim()) {
       return allChatwootContacts;
     }
     
     const searchLower = searchTerm.toLowerCase().trim();
-    return allChatwootContacts.filter(contact => 
-      contact.name?.toLowerCase().includes(searchLower) ||
-      contact.email?.toLowerCase().includes(searchLower) ||
-      contact.phone_number?.toLowerCase().includes(searchLower)
-    );
+    const searchWords = searchLower.split(' ').filter(word => word.length > 0);
+    
+    return allChatwootContacts.filter(contact => {
+      const name = contact.name?.toLowerCase() || '';
+      const email = contact.email?.toLowerCase() || '';
+      const phone = contact.phone_number?.toLowerCase() || '';
+      
+      // Verifica se TODOS os termos de busca estão presentes em qualquer campo
+      return searchWords.every(word => 
+        name.includes(word) || 
+        email.includes(word) || 
+        phone.includes(word)
+      );
+    });
   }, [allChatwootContacts, searchTerm]);
   
   // Busca negócios existentes no estágio padrão
