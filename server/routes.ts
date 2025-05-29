@@ -552,12 +552,22 @@ export async function registerRoutes(app: Express): Promise<Express> {
       
       // Verificar se existe um termo de busca na query
       const searchQuery = req.query.q as string;
+      const page = req.query.page || 1;
+      
       let chatwootApiUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts`;
       
-      // Se tiver um termo de busca, adicionar à URL da API Chatwoot
+      // Construir parâmetros da query
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('sort', 'created_at_desc'); // Ordenar por data de criação (mais recentes primeiro)
+      
       if (searchQuery && searchQuery.trim()) {
-        chatwootApiUrl += `?q=${encodeURIComponent(searchQuery.trim())}`;
+        queryParams.append('q', searchQuery.trim());
       }
+      
+      chatwootApiUrl += `?${queryParams.toString()}`;
+      
+      console.log(`Fetching Chatwoot contacts from: ${chatwootApiUrl}`);
       
       const response = await axios.get(
         chatwootApiUrl,
@@ -568,9 +578,15 @@ export async function registerRoutes(app: Express): Promise<Express> {
         }
       );
       
+      console.log(`Chatwoot API response status: ${response.status}`);
+      console.log(`Total contacts returned: ${response.data?.payload?.length || 0}`);
+      console.log(`Meta info:`, response.data?.meta);
+      
       res.json(response.data);
     } catch (error) {
+      console.error("Error fetching Chatwoot contacts:", error);
       if (axios.isAxiosError(error)) {
+        console.error("Chatwoot API error response:", error.response?.data);
         res.status(error.response?.status || 500).json({
           message: "Failed to fetch Chatwoot contacts",
           error: error.response?.data || error.message
