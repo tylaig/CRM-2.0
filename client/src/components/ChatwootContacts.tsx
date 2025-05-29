@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Deal, PipelineStage, Settings } from "@shared/schema";
@@ -190,7 +190,21 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
   });
   
   // Extrair o array de contatos da resposta
-  const chatwootContacts = chatwootResponse?.payload || [];
+  const allChatwootContacts = chatwootResponse?.payload || [];
+  
+  // Filtrar contatos por nome, email ou telefone localmente
+  const chatwootContacts = useMemo(() => {
+    if (!searchTerm || !searchTerm.trim()) {
+      return allChatwootContacts;
+    }
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    return allChatwootContacts.filter(contact => 
+      contact.name?.toLowerCase().includes(searchLower) ||
+      contact.email?.toLowerCase().includes(searchLower) ||
+      contact.phone_number?.toLowerCase().includes(searchLower)
+    );
+  }, [allChatwootContacts, searchTerm]);
   
   // Busca negócios existentes no estágio padrão
   const { data: defaultStageDeals, isLoading: isLoadingDeals } = useQuery<Deal[]>({

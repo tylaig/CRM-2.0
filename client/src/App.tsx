@@ -6,6 +6,7 @@ import Losses from "@/pages/Losses";
 import Historical from "@/pages/Historical";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import ChatwootContacts from "@/components/ChatwootContacts";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 
 function PrivateRoute({ component: Component, ...rest }: any) {
@@ -26,6 +27,7 @@ function AppRoutes() {
       <Route path="/sales" component={() => <PrivateRoute component={Sales} />} />
       <Route path="/losses" component={() => <PrivateRoute component={Losses} />} />
       <Route path="/historical" component={() => <PrivateRoute component={Historical} />} />
+      <Route path="/chatwoot-contacts" component={() => <PrivateRoute component={ChatwootContacts} />} />
       <Route component={NotFound} />
     </Switch>
   );
