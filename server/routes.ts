@@ -1520,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
         return res.status(404).json({ message: "Quote item not found" });
       }
       
-      res.status(204).send();
+      res.status(200).json({ message: "Quote item deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete quote item" });
     }
