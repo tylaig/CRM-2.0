@@ -323,9 +323,15 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       console.log("Dados finais que serão enviados para a API:", data);
       return apiRequest(`/api/deals/${deal.id}`, "PUT", data);
     },
-    onSuccess: async () => {
+    onSuccess: async (updatedDeal) => {
       // Limpar a referência aos dados do lead
       leadUpdateDataRef.current = null;
+      
+      // CORREÇÃO: Atualizar imediatamente as notas locais com os dados salvos
+      if (updatedDeal && updatedDeal.notes !== undefined) {
+        setNotes(updatedDeal.notes || "");
+        console.log("✅ Notas atualizadas localmente:", updatedDeal.notes);
+      }
       
       // Parar a proteção de edição para permitir que os dados atualizados sejam carregados
       setIsEditingNotes(false);
