@@ -587,27 +587,53 @@ export async function registerRoutes(app: Express): Promise<Express> {
         return res.json(response.data);
       }
       
-      // Buscar contatos do Chatwoot de forma simples e direta
+      // Buscar todos os contatos do Chatwoot usando paginação
       let allContacts = [];
+      let currentPage = 1;
+      let hasMorePages = true;
       
       try {
         console.log(`Fetching contacts from: ${chatwootApiUrl}`);
         
-        const response = await axios.get(chatwootApiUrl, {
-          headers: { 
-            'api_access_token': finalApiKey
-          },
-          params: {
-            per_page: 100
+        while (hasMorePages) {
+          const response = await axios.get(chatwootApiUrl, {
+            headers: { 
+              'api_access_token': finalApiKey
+            },
+            params: {
+              page: currentPage,
+              per_page: 20
+            }
+          });
+          
+          if (response.data?.payload && response.data.payload.length > 0) {
+            allContacts.push(...response.data.payload);
+            console.log(`Page ${currentPage}: ${response.data.payload.length} contacts`);
+            
+            // Verificar se há mais páginas baseado no meta
+            const meta = response.data.meta;
+            if (meta && meta.current_page && meta.count) {
+              // Calcular total de páginas baseado no count total
+              const totalPages = Math.ceil(meta.count / 20);
+              hasMorePages = currentPage < totalPages;
+            } else {
+              // Se não há meta, parar se esta página tem menos contatos que o limite
+              hasMorePages = response.data.payload.length >= 20;
+            }
+            
+            currentPage++;
+            
+            // Limite de segurança para evitar loop infinito
+            if (currentPage > 10) {
+              console.log("Reached page limit, stopping");
+              hasMorePages = false;
+            }
+          } else {
+            hasMorePages = false;
           }
-        });
-        
-        if (response.data?.payload) {
-          allContacts = response.data.payload;
-          console.log(`Fetched ${allContacts.length} contacts successfully`);
-        } else {
-          console.log("No payload in response:", response.data);
         }
+        
+        console.log(`Total contacts fetched: ${allContacts.length}`);
       } catch (error) {
         console.log("Error fetching contacts:", error.response?.data || error.message);
         return res.status(500).json({ 
