@@ -750,10 +750,27 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // Rota para criar novo contato no Chatwoot
   apiRouter.post("/chatwoot/contacts", async (req: Request, res: Response) => {
     try {
-      const settings = await storage.getSettings();
+      // Usar credenciais das variáveis de ambiente primeiro
+      const chatwootUrl = process.env.CHATWOOT_URL;
+      const chatwootApiKey = process.env.CHATWOOT_API_KEY;
+      const accountId = process.env.CHATWOOT_ACCOUNT_ID;
       
-      if (!settings || !settings.chatwootApiKey || !settings.chatwootUrl || !settings.accountId) {
-        return res.status(400).json({ message: "Chatwoot API not configured" });
+      let finalUrl, finalApiKey, finalAccountId;
+      
+      if (chatwootUrl && chatwootApiKey && accountId) {
+        finalUrl = chatwootUrl;
+        finalApiKey = chatwootApiKey;
+        finalAccountId = accountId;
+        console.log("Using environment variables for Chatwoot API");
+      } else {
+        const settings = await storage.getSettings();
+        if (!settings || !settings.chatwootApiKey || !settings.chatwootUrl || !settings.accountId) {
+          return res.status(400).json({ message: "Chatwoot API not configured" });
+        }
+        finalUrl = settings.chatwootUrl;
+        finalApiKey = settings.chatwootApiKey;
+        finalAccountId = settings.accountId;
+        console.log("Using database settings for Chatwoot API");
       }
       
       // Validar os dados necessários para criar um contato
@@ -776,13 +793,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
       };
       
       // Criar o contato no Chatwoot
-      const chatwootApiUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts`;
+      const chatwootApiUrl = `${finalUrl}/api/v1/accounts/${finalAccountId}/contacts`;
       const response = await axios.post(
         chatwootApiUrl,
         contactData,
         {
           headers: {
-            'api_access_token': settings.chatwootApiKey,
+            'api_access_token': finalApiKey,
             'Content-Type': 'application/json'
           }
         }
@@ -798,9 +815,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
         
         // Verificar se o contato aparece na listagem
         try {
-          const verifyUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts/${createdContact?.id}`;
+          const verifyUrl = `${finalUrl}/api/v1/accounts/${finalAccountId}/contacts/${createdContact?.id}`;
           const verifyResponse = await axios.get(verifyUrl, {
-            headers: { 'api_access_token': settings.chatwootApiKey }
+            headers: { 'api_access_token': finalApiKey }
           });
           console.log("Contato verificado após criação:", verifyResponse.data);
         } catch (verifyError) {
