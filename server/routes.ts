@@ -392,20 +392,21 @@ export async function registerRoutes(app: Express): Promise<Express> {
           
           // Registrar atividade de mudança de etapa
           if (existingDeal.stageId !== stageId) {
-            // Buscar etapas diretamente do banco para garantir que os nomes sejam encontrados
+            // Buscar etapas usando o storage que funciona corretamente
             try {
-              const [oldStageResult] = await db
-                .select({ name: pipelineStages.name })
-                .from(pipelineStages)
-                .where(eq(pipelineStages.id, existingDeal.stageId));
-              
-              const [newStageResult] = await db
-                .select({ name: pipelineStages.name })
-                .from(pipelineStages)
-                .where(eq(pipelineStages.id, stageId));
+              // Buscar todas as etapas disponíveis
+              const allStages = await storage.getAllPipelineStages();
+              const oldStage = allStages.find(s => s.id === existingDeal.stageId);
+              const newStage = allStages.find(s => s.id === stageId);
 
-              const oldStageName = oldStageResult?.name || 'Etapa Removida';
-              const newStageName = newStageResult?.name || 'Etapa Não Encontrada';
+              const oldStageName = oldStage?.name || 'Etapa Removida';
+              const newStageName = newStage?.name || 'Etapa Não Encontrada';
+              
+              console.log('=== DEBUG NOMES DAS ETAPAS ===');
+              console.log('Etapa antiga ID:', existingDeal.stageId, 'Nome:', oldStageName);
+              console.log('Etapa nova ID:', stageId, 'Nome:', newStageName);
+              console.log('Total de etapas encontradas:', allStages.length);
+              console.log('==============================');
               
               await logActivity(
                 targetId,
