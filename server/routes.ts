@@ -1,6 +1,5 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { WebSocketServer, WebSocket } from "ws";
-import { createServer } from "http";
 
 // Estender a interface Request para incluir user
 declare global {
@@ -2328,4 +2327,52 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.use("/api", apiRouter);
   
   return app;
+}
+
+// Função para configurar WebSocket server
+export function setupWebSocketServer(httpServer: any) {
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('🔔 Nova conexão WebSocket estabelecida');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Registrar cliente por usuário quando receber userId
+        if (data.type === 'register' && data.userId) {
+          const userId = data.userId;
+          if (!wsClients.has(userId)) {
+            wsClients.set(userId, []);
+          }
+          wsClients.get(userId)!.push(ws);
+          console.log(`🔔 Cliente registrado para usuário ${userId}`);
+        }
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('🔔 Conexão WebSocket encerrada');
+      // Remover cliente da lista quando desconectar
+      wsClients.forEach((clients, userId) => {
+        const index = clients.indexOf(ws);
+        if (index !== -1) {
+          clients.splice(index, 1);
+          if (clients.length === 0) {
+            wsClients.delete(userId);
+          }
+        }
+      });
+    });
+    
+    ws.on('error', (error) => {
+      console.error('Erro na conexão WebSocket:', error);
+    });
+  });
+  
+  console.log('🔔 WebSocket server configurado em /ws');
+  return wss;
 }
