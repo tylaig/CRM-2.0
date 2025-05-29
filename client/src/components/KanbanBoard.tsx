@@ -289,7 +289,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         setIsPolling(false);
         setPollingProgress(0);
       });
-    }, 2000); // A cada 2 segundos
+    }, 5000); // A cada 5 segundos
     
     // Indicador de progresso visual - também pausa quando modais estão abertos
     const progressInterval = setInterval(() => {
@@ -301,7 +301,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
         if (prev >= 100) {
           return 0;
         }
-        return prev + (100 / 20); // 20 steps over 2 seconds = 100ms per step
+        return prev + (100 / 50); // 50 steps over 5 seconds = 100ms per step
       });
     }, 100);
     
@@ -467,20 +467,32 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex flex-col h-full relative">
         {/* Indicador de Polling */}
-        <div className="fixed top-4 right-4 z-50 flex items-center space-x-2">
+        <div className="fixed top-4 right-4 z-50 flex items-center space-x-2 group">
           <div className="relative">
-            {/* Esfera principal */}
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-              isPolling 
-                ? 'bg-blue-500 scale-110' 
-                : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}>
+            {/* Esfera principal - Clicável para atualizar manualmente */}
+            <button 
+              onClick={() => {
+                console.log("🔄 Atualização manual solicitada");
+                setIsPolling(true);
+                setPollingProgress(0);
+                fetchDeals().finally(() => {
+                  setIsPolling(false);
+                  setPollingProgress(0);
+                });
+              }}
+              className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                isPolling 
+                  ? 'bg-blue-500 scale-110' 
+                  : 'bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900 cursor-pointer'
+              }`}
+              title="Clique para atualizar agora"
+            >
               <RefreshCwIcon className={`w-5 h-5 transition-all duration-300 ${
                 isPolling 
                   ? 'text-white animate-spin' 
-                  : 'text-gray-500 dark:text-gray-400'
+                  : 'text-gray-500 dark:text-gray-400 group-hover:text-blue-600'
               }`} />
-            </div>
+            </button>
             
             {/* Barra de progresso circular */}
             <svg className="absolute top-0 left-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
