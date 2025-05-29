@@ -389,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
   
-  apiRouter.put("/deals/:id", async (req: Request, res: Response) => {
+  apiRouter.put("/deals/:id", authMiddleware, async (req: Request, res: Response) => {
     try {
       // Verificar se é atualização normal ou do drag-and-drop
       const id = parseInt(req.params.id);
