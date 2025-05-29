@@ -413,6 +413,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
                 'stage_change',
                 `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`
               );
+              
+              // Broadcast para invalidar cache de atividades
+              broadcastUpdate('activities:updated', {
+                dealId: targetId,
+                timestamp: new Date().toISOString()
+              });
             } catch (error) {
               console.error('Erro ao buscar nomes das etapas:', error);
               await logActivity(
