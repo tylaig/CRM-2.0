@@ -28,6 +28,7 @@ import {
   insertMachineModelSchema,
   insertLeadSchema,
   insertSalePerformanceReasonSchema,
+  deals,
   Deal,
   SalePerformanceReason,
   salePerformanceReasons,
@@ -215,40 +216,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid ID" });
-      }
-      
-      // Buscar o estágio a ser excluído
-      const stageToDelete = await storage.getPipelineStage(id);
-      if (!stageToDelete) {
-        return res.status(404).json({ message: "Pipeline stage not found" });
-      }
-      
-      // Buscar todos os negócios associados a este estágio
-      const associatedDeals = await storage.getDeals(undefined, id);
-      
-      if (associatedDeals.length > 0) {
-        // Buscar o primeiro estágio do mesmo pipeline
-        const pipelineStages = await storage.getPipelineStages(stageToDelete.pipelineId);
-        const firstStage = pipelineStages.find(stage => stage.id !== id);
-        
-        if (!firstStage) {
-          return res.status(400).json({ 
-            message: "Não é possível excluir o único estágio do pipeline" 
-          });
-        }
-        
-        // Mover todos os negócios para o primeiro estágio
-        for (const deal of associatedDeals) {
-          await storage.updateDeal(deal.id, { stageId: firstStage.id });
-          
-          // Registrar atividade de movimento
-          await logActivity(
-            deal.id,
-            'stage_moved',
-            `Lead movido de "${stageToDelete.name}" para "${firstStage.name}" (estágio excluído)`,
-            req.user?.id
-          );
-        }
       }
       
       const success = await storage.deletePipelineStage(id);
