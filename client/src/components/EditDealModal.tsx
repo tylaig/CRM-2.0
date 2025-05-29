@@ -372,10 +372,19 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       if (deal && pipelineId && deal.pipelineId !== parseInt(pipelineId)) {
         const oldPipelineName = pipelines.find(p => p.id === deal.pipelineId)?.name || "Desconhecido";
         const newPipelineName = pipelines.find(p => p.id === parseInt(pipelineId))?.name || "Desconhecido";
+        
+        // Registrar atividade
         createActivityMutation.mutate({
           description: `Negócio movido do pipeline "${oldPipelineName}" para "${newPipelineName}"`,
           dealId: deal.id ?? 0,
           activityType: "pipeline_change"
+        });
+        
+        // Invalidar especificamente o pipeline atual para remover o negócio da visualização
+        console.log(`🔄 Negócio movido para outro pipeline - invalidando pipeline ${deal.pipelineId}`);
+        await queryClient.invalidateQueries({ 
+          queryKey: ['/api/deals'], 
+          refetchType: 'active' 
         });
       }
       // Verificar se o estágio foi alterado e registrar atividade

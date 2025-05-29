@@ -15,7 +15,8 @@ import {
   UserIcon,
   UsersIcon,
   MapIcon,
-  FilterIcon
+  FilterIcon,
+  RefreshCwIcon
 } from "lucide-react";
 import SettingsModal from "./SettingsModal";
 import PipelineSelector from "./PipelineSelector";
@@ -33,6 +34,7 @@ interface HeaderProps {
   activePipelineId?: number | null;
   onPipelineChange?: (pipelineId: number) => void;
   pipelineStages?: any[]; // Adicionado para verificar se existem estágios
+  onRefreshKanban?: () => void; // Nova função para atualizar o kanban
 }
 
 export default function Header({
@@ -44,7 +46,8 @@ export default function Header({
   hasApiConfig = false,
   activePipelineId,
   onPipelineChange,
-  pipelineStages = []
+  pipelineStages = [],
+  onRefreshKanban
 }: HeaderProps) {
   const [location] = useLocation();
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -226,6 +229,24 @@ export default function Header({
                     Mapa de Calor
                   </div>
                 </div>
+                
+                {/* Botão de atualização do kanban */}
+                {(viewMode === "kanban" || viewMode === "list") && onRefreshKanban && (
+                  <div className="relative group">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={onRefreshKanban}
+                      className="h-9 w-9 rounded text-white hover:text-primary hover:bg-white/10"
+                      title="Atualizar dados"
+                    >
+                      <RefreshCwIcon className="h-5 w-5" />
+                    </Button>
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                      Atualizar dados
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
