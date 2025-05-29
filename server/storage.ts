@@ -939,10 +939,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePipelineStage(id: number): Promise<boolean> {
-    const result = await db
-      .delete(pipelineStages)
-      .where(eq(pipelineStages.id, id));
-    return !!result;
+    try {
+      const result = await db
+        .delete(pipelineStages)
+        .where(eq(pipelineStages.id, id));
+      return result.rowCount > 0;
+    } catch (error: any) {
+      console.error(`Erro ao excluir estágio ${id}:`, error);
+      return false;
+    }
   }
 
   // Deals
