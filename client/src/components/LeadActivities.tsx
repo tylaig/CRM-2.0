@@ -26,6 +26,11 @@ const activityTypes = [
   { value: 'note_added', label: 'Anotação', icon: MessageCircle },
   { value: 'pipeline_change', label: 'Mudança de Pipeline', icon: GitBranch },
   { value: 'stage_change', label: 'Mudança de Etapa', icon: ArrowRightLeft },
+  { value: 'sale_won', label: 'Venda Realizada', icon: FileText },
+  { value: 'sale_lost', label: 'Venda Perdida', icon: FileText },
+  { value: 'quote_item_added', label: 'Item Adicionado à Cotação', icon: FileText },
+  { value: 'quote_item_removed', label: 'Item Removido da Cotação', icon: FileText },
+  { value: 'value_updated', label: 'Valor Atualizado', icon: FileText },
 ];
 
 export default function LeadActivities({ deal }: LeadActivitiesProps) {
@@ -34,7 +39,9 @@ export default function LeadActivities({ deal }: LeadActivitiesProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['/api/lead-activities', deal?.id],
     queryFn: async () => {
+      console.log('Buscando atividades para deal:', deal?.id);
       const response = await apiRequest(`/api/lead-activities/${deal?.id}`, 'GET');
+      console.log('Atividades recebidas:', response);
       return (response as unknown) as LeadActivity[];
     },
     enabled: !!deal?.id,
@@ -42,6 +49,11 @@ export default function LeadActivities({ deal }: LeadActivitiesProps) {
   
   // Garantir que sempre seja um array, mesmo se a API retornar algo inesperado
   const activities = Array.isArray(data) ? data : [];
+  
+  console.log('Deal ID:', deal?.id);
+  console.log('Data:', data);
+  console.log('Activities:', activities);
+  console.log('Is Loading:', isLoading);
 
   const deleteActivityMutation = useMutation({
     mutationFn: (id: number) => 
