@@ -1629,6 +1629,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
         `Item adicionado à cotação: ${validatedData.description} (Qtd: ${validatedData.quantity}, Valor: R$ ${validatedData.unitPrice.toFixed(2)})`
       );
       
+      // Broadcast para cotação atualizada
+      broadcastUpdate('quote:updated', {
+        dealId: validatedData.dealId,
+        action: 'quote_added',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Broadcast para atividades atualizadas
+      broadcastUpdate('activities:updated', {
+        dealId: validatedData.dealId,
+        timestamp: new Date().toISOString()
+      });
+      
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1674,6 +1687,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
       if (!success) {
         return res.status(404).json({ message: "Quote item not found" });
       }
+      
+      // Broadcast genérico para cotação atualizada - será capturado por todos os deals
+      broadcastUpdate('quote:updated', {
+        action: 'quote_deleted',
+        timestamp: new Date().toISOString()
+      });
       
       res.status(200).json({ message: "Quote item deleted successfully" });
     } catch (error) {

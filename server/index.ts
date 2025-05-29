@@ -3,7 +3,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import * as os from 'os';
 import { createServer } from "http";
-import { WebSocketServer } from "ws";
 
 const app = express();
 app.use(express.json());
@@ -64,29 +63,22 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Configurar WebSocket Server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Configurar WebSocket Server - temporariamente removido para estabilizar
+  // const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
-  wss.on('connection', (ws) => {
-    console.log('Nova conexão WebSocket estabelecida');
-    
-    // Adicionar cliente à lista de clientes conectados
-    const routes = require('./routes');
-    if (routes.addWebSocketClient) {
-      routes.addWebSocketClient(ws);
-    }
-    
-    ws.on('close', () => {
-      console.log('Conexão WebSocket fechada');
-      if (routes.removeWebSocketClient) {
-        routes.removeWebSocketClient(ws);
-      }
-    });
-    
-    ws.on('error', (error) => {
-      console.error('Erro WebSocket:', error);
-    });
-  });
+  // wss.on('connection', (ws) => {
+  //   console.log('Nova conexão WebSocket estabelecida');
+  //   addWebSocketClient(ws);
+  //   
+  //   ws.on('close', () => {
+  //     console.log('Conexão WebSocket fechada');
+  //     removeWebSocketClient(ws);
+  //   });
+  //   
+  //   ws.on('error', (error) => {
+  //     console.error('Erro WebSocket:', error);
+  //   });
+  // });
 
   // Permitir configuração via variáveis de ambiente
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
