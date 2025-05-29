@@ -596,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
         console.log(`Fetching large page: ${largePageUrl}`);
         
         const largeResponse = await axios.get(largePageUrl, {
-          headers: { 'api_access_token': settings.chatwootApiKey }
+          headers: { 'api_access_token': finalApiKey }
         });
         
         if (largeResponse.data?.payload) {
@@ -616,7 +616,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
             console.log(`Fetching page ${currentPage}: ${pageUrl}`);
             
             const response = await axios.get(pageUrl, {
-              headers: { 'api_access_token': settings.chatwootApiKey }
+              headers: { 'api_access_token': finalApiKey }
             });
             
             if (response.data?.payload && response.data.payload.length > 0) {
