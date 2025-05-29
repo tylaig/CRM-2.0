@@ -369,7 +369,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Invalidar múltiplas consultas para garantir atualização completa
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/deals"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/deals", deal?.id] }),
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${deal?.id}`] }),
         queryClient.invalidateQueries({ queryKey: ["/api/pipeline-stages"] }),
         // Se mudou de pipeline, invalidar ambos os pipelines
         deal?.pipelineId && pipelineId && deal.pipelineId !== parseInt(pipelineId) ? 
@@ -379,8 +379,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           ]) : Promise.resolve()
       ]);
       
-      // Forçar refetch imediato dos dados específicos do deal
+      // CORREÇÃO: Forçar refetch imediato dos dados específicos do deal
       await refetchDealData();
+      
+      // CORREÇÃO EXTRA: Aguardar um momento para garantir que os dados sejam atualizados
+      setTimeout(() => {
+        refetchDealData();
+      }, 100);
       
       // Fechar o modal
       onClose();
