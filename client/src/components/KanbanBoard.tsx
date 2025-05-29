@@ -9,6 +9,7 @@ import {
   MessagesSquareIcon,
   PlusIcon,
   Edit2Icon,
+  RefreshCwIcon,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -106,6 +107,10 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   const [selectedStageForNewDeal, setSelectedStageForNewDeal] = useState<PipelineStage | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [targetStageInfo, setTargetStageInfo] = useState<{ id: number, type: string | null }>({ id: 0, type: null });
+  
+  // Estados para o indicador de polling
+  const [pollingProgress, setPollingProgress] = useState(0);
+  const [isPolling, setIsPolling] = useState(false);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -269,14 +274,29 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     
     fetchDeals();
     
-    // Criar polling mais agressivo para atualizações em tempo real
+    // Criar polling mais agressivo para atualizações em tempo real com indicador visual
     const pollingInterval = setInterval(() => {
       console.log("🔄 Polling: Verificando atualizações do kanban...");
-      fetchDeals();
+      setIsPolling(true);
+      fetchDeals().finally(() => {
+        setIsPolling(false);
+        setPollingProgress(0);
+      });
     }, 2000); // A cada 2 segundos
+    
+    // Indicador de progresso visual
+    const progressInterval = setInterval(() => {
+      setPollingProgress(prev => {
+        if (prev >= 100) {
+          return 0;
+        }
+        return prev + (100 / 20); // 20 steps over 2 seconds = 100ms per step
+      });
+    }, 100);
     
     return () => {
       clearInterval(pollingInterval);
+      clearInterval(progressInterval);
     };
   }, [activePipelineId, pipelineStages.length, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
   
@@ -434,7 +454,52 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full relative">
+        {/* Indicador de Polling */}
+        <div className="fixed top-4 right-4 z-50 flex items-center space-x-2">
+          <div className="relative">
+            {/* Esfera principal */}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+              isPolling 
+                ? 'bg-blue-500 scale-110' 
+                : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}>
+              <RefreshCwIcon className={`w-5 h-5 transition-all duration-300 ${
+                isPolling 
+                  ? 'text-white animate-spin' 
+                  : 'text-gray-500 dark:text-gray-400'
+              }`} />
+            </div>
+            
+            {/* Barra de progresso circular */}
+            <svg className="absolute top-0 left-0 w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-gray-200 dark:text-gray-700"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="transparent"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className={`transition-all duration-100 ${
+                  isPolling ? 'text-blue-300' : 'text-blue-500'
+                }`}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                fill="transparent"
+                strokeDasharray={`${pollingProgress}, 100`}
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
+          
+          {/* Tooltip */}
+          <div className="hidden group-hover:block absolute right-12 top-0 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+            {isPolling ? 'Sincronizando...' : `Próxima atualização: ${Math.ceil(2 - (pollingProgress / 50))}s`}
+          </div>
+        </div>
+        
         {/* Botão oculto para ser clicado pelo Header para adicionar estágio */}
         <button
           id="add-stage-button"
