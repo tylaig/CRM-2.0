@@ -473,10 +473,36 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     // Armazenar dados do lead para referência
     leadUpdateDataRef.current = leadUpdateData;
     
-    // CORREÇÃO: Só atualizar lead se houver dados alterados no lead
-    const hasLeadChanges = Object.keys(leadUpdateData).length > 0;
+    // CORREÇÃO: Só atualizar lead se houver dados realmente alterados no lead
+    const hasLeadChanges = leadData && (
+      leadData.companyName !== companyName ||
+      leadData.clientCategory !== clientCategory ||
+      leadData.clientType !== clientType ||
+      leadData.cnpj !== (clientType === "company" ? cnpj : null) ||
+      leadData.corporateName !== (clientType === "company" ? corporateName : null) ||
+      leadData.stateRegistration !== stateRegistration ||
+      leadData.cpf !== (clientType === "person" ? cpf : null) ||
+      leadData.clientCodeSaoPaulo !== clientCodeSaoPaulo ||
+      leadData.clientCodePara !== clientCodePara ||
+      leadData.email !== email ||
+      leadData.phone !== phone ||
+      leadData.address !== address ||
+      leadData.addressNumber !== addressNumber ||
+      leadData.addressComplement !== addressComplement ||
+      leadData.neighborhood !== neighborhood ||
+      leadData.zipCode !== zipCode
+    );
+    
+    console.log("🔍 VERIFICAÇÃO DE ALTERAÇÕES NO LEAD:", {
+      hasLeadChanges,
+      leadDataExists: !!leadData
+    });
+    
     if (hasLeadChanges) {
+      console.log("📝 Atualizando LEAD - dados alterados detectados");
       updateLeadMutation.mutate(leadUpdateData);
+    } else {
+      console.log("✅ LEAD não alterado - pulando atualização do lead");
     }
     
     // Atualizar deal diretamente com os dados corretos (sempre executar)
