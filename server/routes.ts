@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
             },
             params: {
               page: currentPage,
-              per_page: 20
+              per_page: 15
             }
           });
           
@@ -610,22 +610,24 @@ export async function registerRoutes(app: Express): Promise<Express> {
             allContacts.push(...response.data.payload);
             console.log(`Page ${currentPage}: ${response.data.payload.length} contacts`);
             
-            // Verificar se há mais páginas baseado no meta
+            // Verificar se há mais páginas
             const meta = response.data.meta;
-            if (meta && meta.current_page && meta.count) {
-              // Calcular total de páginas baseado no count total
-              const totalPages = Math.ceil(meta.count / 20);
+            if (meta && meta.count) {
+              // Calcular total de páginas baseado no count total (15 contatos por página)
+              const totalPages = Math.ceil(meta.count / 15);
               hasMorePages = currentPage < totalPages;
+              console.log(`Meta info: count=${meta.count}, current_page=${currentPage}, total_pages=${totalPages}, has_more=${hasMorePages}`);
             } else {
-              // Se não há meta, parar se esta página tem menos contatos que o limite
-              hasMorePages = response.data.payload.length >= 20;
+              // Se não há meta, continuar se esta página tem 15 contatos (página cheia)
+              hasMorePages = response.data.payload.length === 15;
+              console.log(`No meta, page ${currentPage} has ${response.data.payload.length} contacts, continuing: ${hasMorePages}`);
             }
             
             currentPage++;
             
-            // Limite de segurança para evitar loop infinito
-            if (currentPage > 10) {
-              console.log("Reached page limit, stopping");
+            // Limite de segurança aumentado para suportar mais contatos
+            if (currentPage > 20) {
+              console.log("Reached page limit (20 pages), stopping");
               hasMorePages = false;
             }
           } else {
