@@ -345,12 +345,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         typingTimeout.current = null;
       }
       
-      // 🔥 CORREÇÃO DEFINITIVA: LIMPEZA TOTAL E FORÇADA DO CACHE
+      // 🔥 CORREÇÃO DEFINITIVA: LIMPEZA TOTAL E FORÇADA DO CACHE (INCLUINDO LEADS)
       console.log("🧹 LIMPEZA TOTAL DO CACHE - INICIANDO...");
       
-      // 1. Remover TODOS os dados em cache relacionados a deals
+      // 1. Remover TODOS os dados em cache relacionados a deals E leads
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
       queryClient.removeQueries({ queryKey: [`/api/deals/${deal?.id}`] });
+      queryClient.removeQueries({ queryKey: [`/api/leads/${deal?.leadId}`] });
       
       // 2. Aguardar um momento para garantir que os caches sejam limpos
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -364,14 +365,22 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         queryKey: [`/api/deals/${deal?.id}`],
         refetchType: 'all'
       });
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/leads/${deal?.leadId}`],
+        refetchType: 'all'
+      });
       
       // 4. Forçar refetch imediato com dados FRESCOS do servidor
       await queryClient.refetchQueries({ 
         queryKey: [`/api/deals/${deal?.id}`],
         type: 'all'
       });
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/leads/${deal?.leadId}`],
+        type: 'all'
+      });
       
-      console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados");
+      console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados (deals + leads)");
       
       toast({
         title: "Sucesso!",
@@ -475,7 +484,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       description: "Atualizando informações...",
     });
     
-    // Preparar dados do lead para atualização
+    // Preparar dados do lead para atualização (incluindo sempre as notas)
     const leadUpdateData: Partial<Lead> = {
       companyName,
       clientCategory,
@@ -491,7 +500,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       address,
       addressNumber,
       addressComplement,
-      neighborhood
+      neighborhood,
+      notes // NOVA LÓGICA: Sempre incluir notas no lead
     };
     if (zipCode) {
       leadUpdateData.zipCode = zipCode;
@@ -520,7 +530,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     // Armazenar dados do lead para referência
     leadUpdateDataRef.current = leadUpdateData;
     
-    // CORREÇÃO: Só atualizar lead se houver dados realmente alterados no lead
+    // NOVA LÓGICA: Verificar alterações no lead incluindo as notas
     const hasLeadChanges = leadData && (
       leadData.companyName !== companyName ||
       leadData.clientCategory !== clientCategory ||
@@ -537,7 +547,8 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       leadData.addressNumber !== addressNumber ||
       leadData.addressComplement !== addressComplement ||
       leadData.neighborhood !== neighborhood ||
-      leadData.zipCode !== zipCode
+      leadData.zipCode !== zipCode ||
+      (leadData.notes || "") !== notes // INCLUIR verificação das notas
     );
     
     console.log("🔍 VERIFICAÇÃO DE ALTERAÇÕES NO LEAD:", {
@@ -653,22 +664,22 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
 
   // Sistema de preservação de dados digitados pelo usuário
   useEffect(() => {
-    if (isOpen && deal) {
-      // CORREÇÃO: Usar APENAS as notas do DEAL, nunca as notas do lead
-      const latestNotesFromDatabase = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
-      console.log("=== SISTEMA DE PRESERVAÇÃO DE DADOS ===");
-      console.log("Deal notes (fonte correta):", deal.notes);
-      console.log("API notes (deal fresh):", dealDataFromApi?.notes);
-      console.log("Latest notes do DEAL (decisão final):", latestNotesFromDatabase);
+    if (isOpen && deal && leadData) {
+      // NOVA LÓGICA: Usar as notas do LEAD como fonte única da verdade
+      const latestNotesFromDatabase = leadData.notes || "";
+      console.log("=== SISTEMA DE PRESERVAÇÃO DE DADOS (NOVA LÓGICA) ===");
+      console.log("Lead notes (fonte única da verdade):", leadData.notes);
+      console.log("Deal notes (ignorado):", deal.notes);
+      console.log("Latest notes do LEAD (decisão final):", latestNotesFromDatabase);
       console.log("Valor atual preservado no campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
       
-      // Armazenar sempre as notas mais recentes do DEAL para comparação
+      // Armazenar sempre as notas mais recentes do LEAD para comparação
       setLatestNotesFromDB(latestNotesFromDatabase || "");
       
-      // SEMPRE usar dados mais recentes do DEAL quando o modal abre
+      // SEMPRE usar dados mais recentes do LEAD quando o modal abre
       if (!isEditingNotes) {
-        console.log("🔄 SINCRONIZANDO com dados mais recentes do DEAL:", latestNotesFromDatabase);
+        console.log("🔄 SINCRONIZANDO com dados mais recentes do LEAD:", latestNotesFromDatabase);
         setNotes(latestNotesFromDatabase || "");
         setShowRefreshButton(false);
       } else {
@@ -677,7 +688,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       
       console.log("======================================");
     }
-  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes]);
+  }, [isOpen, deal?.id, leadData?.notes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
