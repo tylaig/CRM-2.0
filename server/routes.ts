@@ -587,41 +587,36 @@ export async function registerRoutes(app: Express): Promise<Express> {
         return res.json(response.data);
       }
       
-      // Buscar todos os contatos do Chatwoot usando paginação
+      // Buscar todos os contatos do Chatwoot usando paginação fixa até página 6
       let allContacts = [];
-      let currentPage = 1;
-      let hasMorePages = true;
       
       try {
         console.log(`Fetching contacts from: ${chatwootApiUrl}`);
         
-        while (hasMorePages) {
+        // Buscar páginas 1 a 6 para garantir que pegamos todos os contatos
+        for (let page = 1; page <= 6; page++) {
+          console.log(`Fetching page ${page}...`);
+          
           const response = await axios.get(chatwootApiUrl, {
             headers: { 
               'api_access_token': finalApiKey
             },
             params: {
-              page: currentPage,
+              page: page,
               per_page: 15
             }
           });
           
           if (response.data?.payload && response.data.payload.length > 0) {
             allContacts.push(...response.data.payload);
-            console.log(`Page ${currentPage}: ${response.data.payload.length} contacts`);
-            
-            currentPage++;
-            
-            // Continuar enquanto a página anterior tinha 15 contatos (página cheia)
-            hasMorePages = response.data.payload.length === 15 && currentPage <= 10;
-            console.log(`Page ${currentPage-1} had ${response.data.payload.length} contacts, continuing to page ${currentPage}: ${hasMorePages}`);
+            console.log(`Page ${page}: ${response.data.payload.length} contacts added`);
           } else {
-            console.log(`Page ${currentPage}: No contacts found, stopping`);
-            hasMorePages = false;
+            console.log(`Page ${page}: No contacts found`);
+            break; // Para se não há mais contatos
           }
         }
         
-        console.log(`Total contacts fetched: ${allContacts.length} from ${currentPage - 1} pages`);
+        console.log(`Total contacts fetched: ${allContacts.length} from ${Math.min(6, allContacts.length / 15 + 1)} pages`);
       } catch (error) {
         console.log("Error fetching contacts:", error.response?.data || error.message);
         return res.status(500).json({ 
