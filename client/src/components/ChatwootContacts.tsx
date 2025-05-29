@@ -96,9 +96,12 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
       // Atualizar cache de contatos
       queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts'] });
       
+      // Obter nome do contato da estrutura correta da resposta
+      const contactName = data.contact?.payload?.contact?.name || data.contact?.name || "contato";
+      
       toast({
         title: "Contato criado com sucesso",
-        description: `O contato ${data.contact.name} foi criado no Chatwoot.`,
+        description: `O contato ${contactName} foi criado no Chatwoot.`,
         variant: "default",
       });
       
