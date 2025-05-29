@@ -275,7 +275,14 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     fetchDeals();
     
     // Criar polling mais agressivo para atualizações em tempo real com indicador visual
+    // PAUSA o polling quando modais estão abertos para não interferir com dropdowns
     const pollingInterval = setInterval(() => {
+      // Pausa polling se algum modal estiver aberto
+      if (isEditDealModalOpen || isAddStageModalOpen) {
+        console.log("🚫 Polling pausado - modal aberto");
+        return;
+      }
+      
       console.log("🔄 Polling: Verificando atualizações do kanban...");
       setIsPolling(true);
       fetchDeals().finally(() => {
@@ -284,8 +291,12 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       });
     }, 2000); // A cada 2 segundos
     
-    // Indicador de progresso visual
+    // Indicador de progresso visual - também pausa quando modais estão abertos
     const progressInterval = setInterval(() => {
+      if (isEditDealModalOpen || isAddStageModalOpen) {
+        return; // Não atualiza o progresso se modal estiver aberto
+      }
+      
       setPollingProgress(prev => {
         if (prev >= 100) {
           return 0;
@@ -298,7 +309,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       clearInterval(pollingInterval);
       clearInterval(progressInterval);
     };
-  }, [activePipelineId, pipelineStages.length, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
+  }, [activePipelineId, pipelineStages.length, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId, isEditDealModalOpen, isAddStageModalOpen]);
   
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
