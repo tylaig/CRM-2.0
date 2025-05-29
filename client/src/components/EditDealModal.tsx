@@ -195,15 +195,16 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       setStageId(deal.stageId?.toString() || "");
       setValue(formatCurrency(deal.value || 0));
       setStatus(deal.status || "in_progress");
-      // Carregar as notas do deal - corrigindo o problema principal
-      setNotes(deal.notes || "");
+      // CORREÇÃO CRÍTICA: NÃO resetar as notas aqui para evitar conflitos
+      // As notas serão gerenciadas pelo useEffect específico de sincronização
+      // setNotes(deal.notes || ""); // <- REMOVIDO
       setQuoteCodeSao(deal.quoteCodeSao || "");
       setQuoteCodePara(deal.quoteCodePara || "");
-      // ... outros campos se necessário
       console.log("=== CARREGANDO DEAL NO MODAL ===");
       console.log("Deal status:", deal.status);
       console.log("Status definido:", deal.status || "in_progress");
       console.log("Deal completo:", deal);
+      console.log("NOTAS NÃO RESETADAS AQUI - gerenciadas por useEffect específico");
       console.log("=================================");
     }
   }, [isOpen, deal]);
@@ -604,31 +605,27 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Armazenar sempre as notas mais recentes do banco
       setLatestNotesFromDB(latestNotesFromDatabase || "");
       
-      // Se não estiver editando, sincronizar automaticamente
-      if (!isEditingNotes) {
+      // CORREÇÃO: SEMPRE sincronizar quando o modal abre pela primeira vez
+      // ou quando não estiver editando
+      if (!isEditingNotes || notes === "") {
+        console.log("🔄 SINCRONIZANDO NOTAS:", latestNotesFromDatabase);
         setNotes(latestNotesFromDatabase || "");
         setShowRefreshButton(false);
+      } else {
+        // Se estiver editando e há dados diferentes, mostrar botão
+        const hasRealDifferences = notes !== latestNotesFromDatabase && 
+                                  latestNotesFromDatabase !== "" && 
+                                  notes !== "";
+        setShowRefreshButton(hasRealDifferences);
+        console.log("🔍 Verificação de diferenças:");
+        console.log("- notes campo:", `"${notes}"`);
+        console.log("- latestNotesFromDatabase:", `"${latestNotesFromDatabase}"`);
+        console.log("- hasRealDifferences:", hasRealDifferences);
       }
-      
-      // Verificar se há diferenças entre o que está no campo e o que está no banco
-      // Mostrar botão apenas se:
-      // 1. Não estiver editando ativamente E
-      // 2. Os valores forem diferentes E
-      // 3. Ambos os valores não estiverem vazios
-      const hasRealDifferences = !isEditingNotes && 
-                                notes !== latestNotesFromDatabase && 
-                                latestNotesFromDatabase !== "" && 
-                                notes !== "";
-      setShowRefreshButton(hasRealDifferences);
-      console.log("🔍 Verificação de diferenças:");
-      console.log("- isEditingNotes:", isEditingNotes);
-      console.log("- notes campo:", `"${notes}"`);
-      console.log("- latestNotesFromDatabase:", `"${latestNotesFromDatabase}"`);
-      console.log("- hasRealDifferences:", hasRealDifferences);
       
       console.log("===================================");
     }
-  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes, notes]);
+  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
