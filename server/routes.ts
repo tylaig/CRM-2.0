@@ -29,10 +29,41 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-// Função para broadcast de atualizações - simplificada
+// WebSocket clients conectados
+const wsClients = new Set<any>();
+
+// Função para adicionar cliente WebSocket
+export function addWebSocketClient(client: any) {
+  wsClients.add(client);
+  console.log(`Cliente WebSocket adicionado. Total: ${wsClients.size}`);
+}
+
+// Função para remover cliente WebSocket
+export function removeWebSocketClient(client: any) {
+  wsClients.delete(client);
+  console.log(`Cliente WebSocket removido. Total: ${wsClients.size}`);
+}
+
+// Função para broadcast de atualizações
 function broadcastUpdate(type: string, data: any) {
   console.log(`WebSocket broadcast: ${type}`, data);
-  // Implementação simplificada por enquanto
+  
+  const message = JSON.stringify({ type, data });
+  
+  // Enviar para todos os clientes conectados
+  wsClients.forEach(client => {
+    if (client.readyState === 1) { // WebSocket.OPEN = 1
+      try {
+        client.send(message);
+        console.log(`Mensagem enviada via WebSocket: ${type}`);
+      } catch (error) {
+        console.error('Erro ao enviar mensagem WebSocket:', error);
+        wsClients.delete(client);
+      }
+    } else {
+      wsClients.delete(client);
+    }
+  });
 }
 
 // Função para registrar atividades automaticamente
@@ -552,8 +583,25 @@ export async function registerRoutes(app: Express): Promise<Express> {
       broadcastUpdate('deal:updated', {
         dealId: targetId,
         deal: updatedDeal,
+        action: stageId !== undefined ? 'stage_moved' : 'updated',
         timestamp: new Date().toISOString()
       });
+      
+      // Se houve mudança nas notas, enviar broadcast específico
+      if (validatedData.notes !== undefined) {
+        broadcastUpdate('notes:updated', {
+          dealId: targetId,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Se houve mudança de pipeline, enviar broadcast específico
+      if (validatedData.pipelineId !== undefined) {
+        broadcastUpdate('pipeline:changed', {
+          dealId: targetId,
+          timestamp: new Date().toISOString()
+        });
+      }
       
       res.json(updatedDeal);
     } catch (error) {

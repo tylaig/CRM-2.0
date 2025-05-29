@@ -42,24 +42,83 @@ export function useWebSocket() {
             case 'deal:updated':
               console.log('Deal atualizado via WebSocket:', message.data);
               
-              // Limpar completamente o cache de deals
-              queryClient.removeQueries({ queryKey: ['/api/deals'] });
-              
-              // Invalidar diretamente
+              // Invalidar todos os dados relacionados a deals
               queryClient.invalidateQueries({ 
                 queryKey: ['/api/deals'],
                 refetchType: 'all' 
               });
               
-              // Se houver dealId específico, invalidar também
+              // Se houver dealId específico, invalidar dados específicos
+              if (message.data.dealId) {
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/deals', message.data.dealId],
+                  refetchType: 'all' 
+                });
+                
+                // Invalidar atividades se foi mudança de etapa
+                if (message.data.action === 'stage_moved') {
+                  queryClient.invalidateQueries({ 
+                    queryKey: ['/api/lead-activities', message.data.dealId],
+                    refetchType: 'all' 
+                  });
+                }
+                
+                // Invalidar cotações se houve mudança de valor
+                if (message.data.action === 'value_updated') {
+                  queryClient.invalidateQueries({ 
+                    queryKey: ['/api/quote-items', message.data.dealId],
+                    refetchType: 'all' 
+                  });
+                }
+              }
+              
+              console.log('✅ Cache de deals atualizado via WebSocket');
+              break;
+              
+            case 'activities:updated':
+              console.log('Atividades atualizadas via WebSocket:', message.data);
+              if (message.data.dealId) {
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/lead-activities', message.data.dealId],
+                  refetchType: 'all' 
+                });
+              }
+              console.log('✅ Cache de atividades atualizado via WebSocket');
+              break;
+              
+            case 'notes:updated':
+              console.log('Notas atualizadas via WebSocket:', message.data);
               if (message.data.dealId) {
                 queryClient.invalidateQueries({ 
                   queryKey: ['/api/deals', message.data.dealId],
                   refetchType: 'all' 
                 });
               }
+              console.log('✅ Cache de notas atualizado via WebSocket');
+              break;
               
-              console.log('✅ Cache atualizado via WebSocket');
+            case 'pipeline:changed':
+              console.log('Pipeline alterado via WebSocket:', message.data);
+              // Invalidar todos os dados quando pipeline muda
+              queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/pipeline-stages'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/pipelines'] });
+              console.log('✅ Cache de pipeline atualizado via WebSocket');
+              break;
+              
+            case 'quote:updated':
+              console.log('Cotação atualizada via WebSocket:', message.data);
+              if (message.data.dealId) {
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/quote-items', message.data.dealId],
+                  refetchType: 'all' 
+                });
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/deals', message.data.dealId],
+                  refetchType: 'all' 
+                });
+              }
+              console.log('✅ Cache de cotações atualizado via WebSocket');
               break;
               
             case 'deal:created':
@@ -75,7 +134,9 @@ export function useWebSocket() {
             case 'lead:updated':
               console.log('Lead atualizado via WebSocket:', message.data);
               queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/leads', message.data.leadId] });
+              if (message.data.leadId) {
+                queryClient.invalidateQueries({ queryKey: ['/api/leads', message.data.leadId] });
+              }
               break;
               
             default:
