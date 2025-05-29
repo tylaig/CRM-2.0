@@ -1,6 +1,4 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import axios from "axios";
 import { eq } from "drizzle-orm";
@@ -72,7 +70,7 @@ function adminOnly(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Express> {
   // API routes
   const apiRouter = express.Router();
   

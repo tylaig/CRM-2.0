@@ -39,8 +39,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Criar variáveis globais para WebSocket
+const wsClients = new Set<WebSocket>();
+
+function broadcastUpdate(type: string, data: any) {
+  const message = JSON.stringify({ type, data });
+  console.log(`Broadcasting: ${type} to ${wsClients.size} clients`);
+  
+  wsClients.forEach(ws => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
+  });
+}
+
+// Exportar para usar nos routes
+(global as any).wsClients = wsClients;
+(global as any).broadcastUpdate = broadcastUpdate;
+
 (async () => {
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -50,21 +68,42 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Criar servidor HTTP
+  const httpServer = createServer(app);
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite(app, httpServer);
   } else {
     serveStatic(app);
   }
+
+  // Configurar WebSocket Server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('Cliente WebSocket conectado');
+    wsClients.add(ws);
+    
+    ws.on('close', () => {
+      console.log('Cliente WebSocket desconectado');
+      wsClients.delete(ws);
+    });
+    
+    ws.on('error', (error) => {
+      console.error('Erro WebSocket:', error);
+      wsClients.delete(ws);
+    });
+  });
 
   // Permitir configuração via variáveis de ambiente
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
   const host = process.env.HOST || "0.0.0.0";
   
   try {
-    server.listen(port, host, () => {
+    httpServer.listen(port, host, () => {
       console.log(`Servidor iniciado em http://${host}:${port}`);
       console.log(`Endereços de rede disponíveis:`);
       const networkInterfaces = os.networkInterfaces();
@@ -78,17 +117,16 @@ app.use((req, res, next) => {
     });
 
     // Configurar timeout para conexões
-    // Configurar timeout para conexões
-    server.setTimeout(120000); // 2 minutos
-    server.keepAliveTimeout = 61 * 1000;
-    server.headersTimeout = 65 * 1000;
+    httpServer.setTimeout(120000); // 2 minutos
+    httpServer.keepAliveTimeout = 61 * 1000;
+    httpServer.headersTimeout = 65 * 1000;
   } catch (error) {
     console.error('Erro ao iniciar o servidor:', error);
     process.exit(1);
   }
 
   // Adicionar tratamento de erro para o evento 'error'
-  server.on('error', (error: any) => {
+  httpServer.on('error', (error: any) => {
     console.error('Erro no servidor:', error);
     if (error.code === 'EADDRINUSE') {
       console.error(`Porta ${port} já está em uso. Tente outra porta.`);
