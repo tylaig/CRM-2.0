@@ -51,6 +51,7 @@ interface BaseDeal {
 }
 
 interface Deal extends BaseDeal {
+  salePerformance?: string | null;
   leadData?: {
     name: string;
     companyName: string | null;
@@ -242,7 +243,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
             // Aplicar filtro de performance de vendas se selecionado
             if (salePerformanceFilter !== "all") {
               wonDeals = wonDeals.filter(deal => 
-                deal.performanceReason === salePerformanceFilter
+                deal.salePerformance === salePerformanceFilter
               );
             }
             
@@ -705,9 +706,9 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
                       Abaixo
                     </Badge>
                     <Badge 
-                      variant={salePerformanceFilter === "on_target" ? "default" : "outline"}
-                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "on_target" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}`}
-                      onClick={() => setSalePerformanceFilter("on_target")}
+                      variant={salePerformanceFilter === "match" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "match" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}`}
+                      onClick={() => setSalePerformanceFilter("match")}
                     >
                       Conforme
                     </Badge>

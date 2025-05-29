@@ -351,33 +351,11 @@ export default function Dashboard() {
                     </div>
                   )}
                   
-                  {/* Botão de toggle para filtros */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-yellow-400 hover:text-blue-950 hover:bg-yellow-400 dark:text-yellow-400 dark:hover:text-blue-950 dark:hover:bg-yellow-400 transition-colors"
-                    onClick={() => setShowFilters(!showFilters)}
-                  >
-                    {showFilters ? (
-                      <ChevronUpIcon className="h-5 w-5" />
-                    ) : (
-                      <ChevronDownIcon className="h-5 w-5" />
-                    )}
-                  </Button>
+
                 </div>
               </div>
               
-              {/* Conteúdo dos filtros - exibido/oculto com base em showFilters */}
-              {showFilters && (
-                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
-                  <FilterBar 
-                    onFilterChange={updateFilters}
-                    activeFilters={filters}
-                    activePipelineId={activePipelineId}
-                    isDefaultPipeline={defaultPipeline?.id === activePipelineId}
-                  />
-                </div>
-              )}
+
             </div>
           )}
           
