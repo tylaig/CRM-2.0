@@ -1,4 +1,6 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
+import { WebSocketServer, WebSocket } from "ws";
+import { createServer } from "http";
 
 // Estender a interface Request para incluir user
 declare global {
@@ -28,6 +30,7 @@ import {
   insertMachineModelSchema,
   insertLeadSchema,
   insertSalePerformanceReasonSchema,
+  insertNotificationSchema,
   deals,
   Deal,
   SalePerformanceReason,
@@ -35,7 +38,8 @@ import {
   pipelineStages,
   machineModels,
   machineBrands,
-  users
+  users,
+  notifications
 } from "@shared/schema";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
@@ -43,10 +47,75 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-// Função simplificada para broadcast - logs apenas por enquanto
+// Armazenar conexões WebSocket
+const wsClients = new Map<number, WebSocket[]>(); // userId -> WebSocket[]
+
+// Função para broadcast via WebSocket
 function broadcastUpdate(type: string, data: any) {
-  console.log(`Broadcast simulado: ${type}`, data);
-  // Implementação WebSocket será adicionada posteriormente
+  console.log(`Broadcast: ${type}`, data);
+  
+  // Enviar para todos os clientes conectados se for uma atualização geral
+  if (type === 'deals_updated' || type === 'stages_updated') {
+    wsClients.forEach((clients) => {
+      clients.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type, data }));
+        }
+      });
+    });
+  }
+}
+
+// Função para criar notificação
+async function createNotification(userId: number, dealId: number | null, pipelineId: number, type: string, title: string, message: string) {
+  try {
+    const [notification] = await db.insert(notifications).values({
+      userId,
+      dealId,
+      pipelineId,
+      type,
+      title,
+      message,
+      isRead: false
+    }).returning();
+
+    // Enviar notificação via WebSocket para o usuário específico
+    const userClients = wsClients.get(userId);
+    if (userClients) {
+      userClients.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'notification',
+            data: notification
+          }));
+        }
+      });
+    }
+
+    return notification;
+  } catch (error) {
+    console.error('Erro ao criar notificação:', error);
+  }
+}
+
+// Função para notificar usuários sobre deals criados/movidos para um pipeline
+async function notifyPipelineActivity(dealId: number, pipelineId: number, type: 'created' | 'moved', dealName: string) {
+  try {
+    // Buscar todos os usuários ativos
+    const allUsers = await db.select().from(users);
+    
+    const title = type === 'created' ? 'Novo Lead Criado' : 'Lead Movido';
+    const message = type === 'created' 
+      ? `Novo lead "${dealName}" foi criado no pipeline`
+      : `Lead "${dealName}" foi movido para este pipeline`;
+
+    // Criar notificação para todos os usuários
+    for (const user of allUsers) {
+      await createNotification(user.id, dealId, pipelineId, `deal_${type}`, title, message);
+    }
+  } catch (error) {
+    console.error('Erro ao notificar atividade do pipeline:', error);
+  }
 }
 
 // Função para registrar atividades automaticamente
@@ -2175,6 +2244,62 @@ export async function registerRoutes(app: Express): Promise<Express> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Erro ao excluir usuário" });
+    }
+  });
+
+  // Rotas para notificações
+  apiRouter.get("/notifications", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const userNotifications = await db.select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(notifications.createdAt);
+      
+      res.json(userNotifications);
+    } catch (error) {
+      console.error('Erro ao buscar notificações:', error);
+      res.status(500).json({ message: "Erro ao buscar notificações" });
+    }
+  });
+
+  apiRouter.put("/notifications/:id/read", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      if (isNaN(notificationId)) {
+        return res.status(400).json({ message: "ID inválido" });
+      }
+
+      const [updated] = await db.update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.id, notificationId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Notificação não encontrada" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+      res.status(500).json({ message: "Erro ao marcar notificação como lida" });
+    }
+  });
+
+  apiRouter.put("/notifications/read-all", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      
+      await db.update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.userId, userId));
+
+      res.json({ message: "Todas as notificações foram marcadas como lidas" });
+    } catch (error) {
+      console.error('Erro ao marcar todas as notificações como lidas:', error);
+      res.status(500).json({ message: "Erro ao marcar todas as notificações como lidas" });
     }
   });
 

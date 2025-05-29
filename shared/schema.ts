@@ -434,6 +434,62 @@ export const leadActivitiesRelations = relations(leadActivities, ({ one }) => ({
   }),
 }));
 
+// Notificações
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  dealId: integer("deal_id"),
+  pipelineId: integer("pipeline_id").notNull(),
+  type: text("type").notNull(), // "deal_created", "deal_moved"
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userIdForeignKey: foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+    }),
+    dealIdForeignKey: foreignKey({
+      columns: [table.dealId],
+      foreignColumns: [deals.id],
+    }),
+    pipelineIdForeignKey: foreignKey({
+      columns: [table.pipelineId],
+      foreignColumns: [pipelines.id],
+    }),
+  }
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  dealId: true,
+  pipelineId: true,
+  type: true,
+  title: true,
+  message: true,
+  isRead: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  deal: one(deals, {
+    fields: [notifications.dealId],
+    references: [deals.id],
+  }),
+  pipeline: one(pipelines, {
+    fields: [notifications.pipelineId],
+    references: [pipelines.id],
+  }),
+}));
+
 // Marcas de máquinas
 export const machineBrands = pgTable("machine_brands", {
   id: serial("id").primaryKey(),
