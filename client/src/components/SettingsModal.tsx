@@ -388,7 +388,29 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Mutation para excluir marca
   const deleteBrandMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/machine-brands/${id}`, 'DELETE');
+      try {
+        const response = await fetch(`/api/machine-brands/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status === 204) {
+          return true; // Sucesso na exclusão
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao excluir marca');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Delete brand error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/machine-brands'] });
@@ -397,10 +419,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         description: "A marca foi excluída com sucesso.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao excluir",
-        description: `Ocorreu um erro ao excluir a marca: ${error}`,
+        description: error.message || "Ocorreu um erro ao excluir a marca.",
         variant: "destructive",
       });
     }
@@ -460,7 +482,29 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Mutation para excluir modelo
   const deleteModelMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/machine-models/${id}`, 'DELETE');
+      try {
+        const response = await fetch(`/api/machine-models/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status === 204) {
+          return true; // Sucesso na exclusão
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao excluir modelo');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Delete model error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/machine-models', selectedBrandId] });
@@ -469,10 +513,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         description: "O modelo foi excluído com sucesso.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao excluir",
-        description: `Ocorreu um erro ao excluir o modelo: ${error}`,
+        description: error.message || "Ocorreu um erro ao excluir o modelo.",
         variant: "destructive",
       });
     }
