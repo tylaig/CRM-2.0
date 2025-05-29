@@ -27,17 +27,12 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-// WebSocket clients conectados
-const wsClients = new Set<WebSocket>();
-
-// Função para broadcast de atualizações
+// Função para broadcast de atualizações usando global
 function broadcastUpdate(type: string, data: any) {
-  const message = JSON.stringify({ type, data });
-  wsClients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
+  const broadcastFn = (global as any).broadcastUpdate;
+  if (broadcastFn) {
+    broadcastFn(type, data);
+  }
 }
 
 // Função utilitária para gerar token
@@ -325,14 +320,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
         const deal = await storage.createDeal(validatedData);
         console.log("Negócio criado com sucesso:", JSON.stringify(deal));
         
-        // Broadcast da criação para todos os clientes conectados
-        const broadcastFn = (global as any).broadcastUpdate;
-        if (broadcastFn) {
-          broadcastFn('deal:created', {
-            dealId: deal.id,
-            deal: deal
-          });
-        }
+        // Broadcast da criação WebSocket
+        broadcastUpdate('deal:created', {
+          dealId: deal.id,
+          deal: deal
+        });
         
         res.status(201).json(deal);
       } catch (dbError) {
@@ -387,15 +379,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         
         const updatedDeal = await storage.updateDeal(targetId, updateData);
         
-        // Broadcast da atualização para todos os clientes conectados
-        const broadcastFn = (global as any).broadcastUpdate;
-        if (broadcastFn) {
-          broadcastFn('deal:updated', {
-            dealId: targetId,
-            deal: updatedDeal,
-            action: 'stage_moved'
-          });
-        }
+        // Broadcast da atualização WebSocket
+        broadcastUpdate('deal:updated', {
+          dealId: targetId,
+          deal: updatedDeal,
+          action: 'stage_moved'
+        });
         
         return res.json(updatedDeal);
       }
