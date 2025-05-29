@@ -285,7 +285,12 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
       
       console.log("🔄 Polling: Verificando atualizações do kanban...");
       setIsPolling(true);
-      fetchDeals().finally(() => {
+      
+      // Atualizar tanto os deals quanto os estágios
+      Promise.all([
+        fetchDeals(),
+        queryClient.invalidateQueries({ queryKey: ['/api/pipeline-stages'] })
+      ]).finally(() => {
         setIsPolling(false);
         setPollingProgress(0);
       });
@@ -563,7 +568,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           isOpen={isAddStageModalOpen}
           onClose={() => setIsAddStageModalOpen(false)}
           pipelineStages={pipelineStages}
-          pipelineId={activePipelineId}
+          pipelineId={activePipelineId || 1}
         />
         
         {selectedDeal && (
