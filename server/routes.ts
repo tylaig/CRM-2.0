@@ -554,15 +554,21 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Registrar atividade de mudança de estágio se houve alteração
       if (stageChanged) {
         try {
-          const stages = await storage.getPipelineStages();
-          const oldStage = stages.find(s => s.id === existingDeal.stageId);
-          const newStage = stages.find(s => s.id === validatedData.stageId);
+          // Buscar todos os estágios para encontrar os nomes corretos
+          const allStages = await storage.getAllPipelineStages();
+          const oldStage = allStages.find(s => s.id === existingDeal.stageId);
+          const newStage = allStages.find(s => s.id === validatedData.stageId);
+          
+          const oldStageName = oldStage?.name || `Estágio ID ${existingDeal.stageId}`;
+          const newStageName = newStage?.name || `Estágio ID ${validatedData.stageId}`;
           
           await logActivity(
             targetId,
             'stage_moved',
-            `Lead movido de "${oldStage?.name || 'Estágio desconhecido'}" para "${newStage?.name || 'Estágio desconhecido'}"`
+            `Lead movido de "${oldStageName}" para "${newStageName}"`
           );
+          
+          console.log(`Atividade registrada: ${oldStageName} → ${newStageName}`);
         } catch (error) {
           console.error("Erro ao registrar atividade de mudança de estágio:", error);
           // Continua mesmo se falhar o registro da atividade
