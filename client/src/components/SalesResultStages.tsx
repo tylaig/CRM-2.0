@@ -88,7 +88,7 @@ export default function SalesResultStages({ pipelineStages, filters }: SalesResu
     // Para vendas perdidas, filtrar por motivo de perda se um filtro específico estiver selecionado
     if (status === 'lost' && lossReasonFilter !== 'all') {
       filteredDeals = filteredDeals.filter(deal => 
-        deal.lostReason === lossReasonFilter
+        deal.lostReason && deal.lostReason.toString() === lossReasonFilter
       );
     }
 
@@ -149,25 +149,25 @@ export default function SalesResultStages({ pipelineStages, filters }: SalesResu
                 Todas
               </Badge>
               <Badge 
-                variant={salePerformanceFilter === "below_quote" ? "default" : "outline"}
-                className={salePerformanceFilter === "below_quote" ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}
-                onClick={() => setSalePerformanceFilter("below_quote")}
+                variant={salePerformanceFilter === "below" ? "default" : "outline"}
+                className={salePerformanceFilter === "below" ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}
+                onClick={() => setSalePerformanceFilter("below")}
                 style={{ cursor: "pointer" }}
               >
                 Abaixo da cotação
               </Badge>
               <Badge 
-                variant={salePerformanceFilter === "according_to_quote" ? "default" : "outline"}
-                className={salePerformanceFilter === "according_to_quote" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}
-                onClick={() => setSalePerformanceFilter("according_to_quote")}
+                variant={salePerformanceFilter === "on_target" ? "default" : "outline"}
+                className={salePerformanceFilter === "on_target" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}
+                onClick={() => setSalePerformanceFilter("on_target")}
                 style={{ cursor: "pointer" }}
               >
-                De acordo com a cotação
+                Conforme a cotação
               </Badge>
               <Badge 
-                variant={salePerformanceFilter === "above_quote" ? "default" : "outline"}
-                className={salePerformanceFilter === "above_quote" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
-                onClick={() => setSalePerformanceFilter("above_quote")}
+                variant={salePerformanceFilter === "above" ? "default" : "outline"}
+                className={salePerformanceFilter === "above" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+                onClick={() => setSalePerformanceFilter("above")}
                 style={{ cursor: "pointer" }}
               >
                 Acima da cotação
