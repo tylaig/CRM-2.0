@@ -324,6 +324,16 @@ export async function registerRoutes(app: Express): Promise<Express> {
       try {
         const deal = await storage.createDeal(validatedData);
         console.log("Negócio criado com sucesso:", JSON.stringify(deal));
+        
+        // Broadcast da criação para todos os clientes conectados
+        const broadcastFn = (global as any).broadcastUpdate;
+        if (broadcastFn) {
+          broadcastFn('deal:created', {
+            dealId: deal.id,
+            deal: deal
+          });
+        }
+        
         res.status(201).json(deal);
       } catch (dbError) {
         console.error("Erro no banco de dados ao criar negócio:", dbError);
@@ -376,6 +386,17 @@ export async function registerRoutes(app: Express): Promise<Express> {
         }
         
         const updatedDeal = await storage.updateDeal(targetId, updateData);
+        
+        // Broadcast da atualização para todos os clientes conectados
+        const broadcastFn = (global as any).broadcastUpdate;
+        if (broadcastFn) {
+          broadcastFn('deal:updated', {
+            dealId: targetId,
+            deal: updatedDeal,
+            action: 'stage_moved'
+          });
+        }
+        
         return res.json(updatedDeal);
       }
       
