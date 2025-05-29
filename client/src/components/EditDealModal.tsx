@@ -344,6 +344,14 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         typingTimeout.current = null;
       }
       
+      // 🔥 LIMPEZA FORÇADA DO CACHE PARA RESOLVER PROBLEMA DE SINCRONIZAÇÃO
+      console.log("🧹 LIMPANDO CACHE COMPLETAMENTE...");
+      queryClient.removeQueries({ queryKey: ['/api/deals'] });
+      queryClient.removeQueries({ queryKey: ['/api/deals', deal?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/deals', deal?.id] });
+      console.log("✅ Cache limpo - dados sempre atualizados");
+      
       toast({
         title: "Sucesso!",
         description: "Informações atualizadas com sucesso.",
