@@ -31,6 +31,31 @@ export default function Dashboard() {
   const { user, logout } = useAuth();
   const { isConnected } = useWebSocket();
   
+  // Função para atualizar o kanban manualmente
+  const handleRefreshKanban = async () => {
+    try {
+      // Limpar todos os caches relacionados a deals
+      queryClient.removeQueries({ queryKey: ['/api/deals'] });
+      
+      // Forçar refetch de todas as queries ativas
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/deals'],
+        refetchType: 'active' 
+      });
+      
+      toast({
+        title: "Dados atualizados",
+        description: "O kanban foi sincronizado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar",
+        description: "Ocorreu um erro ao sincronizar os dados.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   // Estado para controlar o pipeline ativo
   const [activePipelineId, setActivePipelineId] = useState<number | null>(null);
   
@@ -231,6 +256,7 @@ export default function Dashboard() {
           activePipelineId={activePipelineId}
           onPipelineChange={(pipelineId) => setActivePipelineId(pipelineId)}
           pipelineStages={pipelineStages}
+          onRefreshKanban={handleRefreshKanban}
         />
       </div>
       
