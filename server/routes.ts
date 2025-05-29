@@ -556,33 +556,67 @@ export async function registerRoutes(app: Express): Promise<Express> {
       
       let chatwootApiUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts`;
       
-      // Construir parâmetros da query
-      const queryParams = new URLSearchParams();
-      queryParams.append('page', page.toString());
-      queryParams.append('sort', 'created_at_desc'); // Ordenar por data de criação (mais recentes primeiro)
-      
+      // Se houver busca, usar a API de busca do Chatwoot
       if (searchQuery && searchQuery.trim()) {
-        queryParams.append('q', searchQuery.trim());
+        chatwootApiUrl += `?q=${encodeURIComponent(searchQuery.trim())}`;
+        
+        console.log(`Searching Chatwoot contacts: ${chatwootApiUrl}`);
+        
+        const response = await axios.get(chatwootApiUrl, {
+          headers: { 'api_access_token': settings.chatwootApiKey }
+        });
+        
+        console.log(`Search results: ${response.data?.payload?.length || 0} contacts found`);
+        return res.json(response.data);
       }
       
-      chatwootApiUrl += `?${queryParams.toString()}`;
+      // Para listagem completa, buscar múltiplas páginas para garantir contatos recentes
+      const allContacts = [];
+      let currentPage = 1;
+      let totalPages = 1;
       
-      console.log(`Fetching Chatwoot contacts from: ${chatwootApiUrl}`);
-      
-      const response = await axios.get(
-        chatwootApiUrl,
-        {
-          headers: {
-            'api_access_token': settings.chatwootApiKey
-          }
+      do {
+        const queryParams = new URLSearchParams();
+        queryParams.append('page', currentPage.toString());
+        queryParams.append('per_page', '25');
+        
+        const pageUrl = `${chatwootApiUrl}?${queryParams.toString()}`;
+        console.log(`Fetching page ${currentPage}: ${pageUrl}`);
+        
+        const response = await axios.get(pageUrl, {
+          headers: { 'api_access_token': settings.chatwootApiKey }
+        });
+        
+        if (response.data?.payload) {
+          allContacts.push(...response.data.payload);
         }
-      );
+        
+        // Atualizar informações de paginação
+        if (response.data?.meta?.total_pages) {
+          totalPages = parseInt(response.data.meta.total_pages);
+        }
+        
+        console.log(`Page ${currentPage}: ${response.data?.payload?.length || 0} contacts, total pages: ${totalPages}`);
+        
+        currentPage++;
+        
+        // Limitar a 3 páginas para evitar sobrecarga
+      } while (currentPage <= totalPages && currentPage <= 3);
       
-      console.log(`Chatwoot API response status: ${response.status}`);
-      console.log(`Total contacts returned: ${response.data?.payload?.length || 0}`);
-      console.log(`Meta info:`, response.data?.meta);
+      // Ordenar por ID decrescente para mostrar mais recentes primeiro
+      allContacts.sort((a, b) => (b.id || 0) - (a.id || 0));
       
-      res.json(response.data);
+      console.log(`Total contacts fetched: ${allContacts.length}`);
+      
+      // Retornar no formato esperado pelo frontend
+      res.json({
+        payload: allContacts,
+        meta: {
+          count: allContacts.length,
+          current_page: 1,
+          total_pages: Math.ceil(allContacts.length / 25)
+        }
+      });
     } catch (error) {
       console.error("Error fetching Chatwoot contacts:", error);
       if (axios.isAxiosError(error)) {

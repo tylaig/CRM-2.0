@@ -92,12 +92,19 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
     mutationFn: async (data: NewContactFormValues) => {
       return await apiRequest("/api/chatwoot/contacts", "POST", data);
     },
-    onSuccess: (data) => {
-      // Atualizar cache de contatos
-      queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts'] });
-      
+    onSuccess: async (data) => {
       // Obter nome do contato da estrutura correta da resposta
       const contactName = data.contact?.payload?.contact?.name || data.contact?.name || "contato";
+      
+      // Aguardar um pouco para que o Chatwoot processe o contato
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Limpar cache completamente e recarregar
+      queryClient.removeQueries({ queryKey: ['/api/chatwoot/contacts'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/chatwoot/contacts'] });
+      
+      // Forçar refetch imediato
+      await refetch();
       
       toast({
         title: "Contato criado com sucesso",
