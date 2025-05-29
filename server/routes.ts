@@ -544,17 +544,34 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // Chatwoot routes
   apiRouter.get("/chatwoot/contacts", async (req: Request, res: Response) => {
     try {
-      const settings = await storage.getSettings();
+      // Usar credenciais das variáveis de ambiente primeiro
+      const chatwootUrl = process.env.CHATWOOT_URL;
+      const chatwootApiKey = process.env.CHATWOOT_API_KEY;
+      const accountId = process.env.CHATWOOT_ACCOUNT_ID;
       
-      if (!settings || !settings.chatwootApiKey || !settings.chatwootUrl || !settings.accountId) {
-        return res.status(400).json({ message: "Chatwoot API not configured" });
+      let finalUrl, finalApiKey, finalAccountId;
+      
+      if (chatwootUrl && chatwootApiKey && accountId) {
+        finalUrl = chatwootUrl;
+        finalApiKey = chatwootApiKey;
+        finalAccountId = accountId;
+        console.log("Using environment variables for Chatwoot API");
+      } else {
+        const settings = await storage.getSettings();
+        if (!settings || !settings.chatwootApiKey || !settings.chatwootUrl || !settings.accountId) {
+          return res.status(400).json({ message: "Chatwoot API not configured" });
+        }
+        finalUrl = settings.chatwootUrl;
+        finalApiKey = settings.chatwootApiKey;
+        finalAccountId = settings.accountId;
+        console.log("Using database settings for Chatwoot API");
       }
       
       // Verificar se existe um termo de busca na query
       const searchQuery = req.query.q as string;
       const page = req.query.page || 1;
       
-      let chatwootApiUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts`;
+      let chatwootApiUrl = `${finalUrl}/api/v1/accounts/${finalAccountId}/contacts`;
       
       // Se houver busca, usar a API de busca do Chatwoot
       if (searchQuery && searchQuery.trim()) {
@@ -563,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
         console.log(`Searching Chatwoot contacts: ${chatwootApiUrl}`);
         
         const response = await axios.get(chatwootApiUrl, {
-          headers: { 'api_access_token': settings.chatwootApiKey }
+          headers: { 'api_access_token': finalApiKey }
         });
         
         console.log(`Search results: ${response.data?.payload?.length || 0} contacts found`);
