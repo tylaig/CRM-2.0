@@ -67,8 +67,29 @@ export default function EditStageModal({ isOpen, onClose, stage }: EditStageModa
   const deleteStageMutation = useMutation({
     mutationFn: async () => {
       if (!stage) return null;
-      // Corrigindo a ordem dos parâmetros para corresponder à função apiRequest
-      return await apiRequest(`/api/pipeline-stages/${stage.id}`, 'DELETE');
+      try {
+        const response = await fetch(`/api/pipeline-stages/${stage.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status === 204) {
+          return true; // Sucesso na exclusão
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao excluir estágio');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Delete stage error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -79,10 +100,10 @@ export default function EditStageModal({ isOpen, onClose, stage }: EditStageModa
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline-stages'] });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao excluir",
-        description: "Não foi possível excluir o estágio. Verifique se não existem negócios associados a ele.",
+        description: error.message || "Não foi possível excluir o estágio. Verifique se não existem negócios associados a ele.",
         variant: "destructive",
       });
       console.error("Delete stage error:", error);
