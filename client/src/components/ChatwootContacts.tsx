@@ -16,7 +16,8 @@ import {
   Check,
   X,
   UserPlus,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import AddDealModal from "@/components/AddDealModal";
 import { toast } from "@/hooks/use-toast";
@@ -87,6 +88,29 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
     }
   });
   
+  // Mutação para sincronizar contatos
+  const syncContactsMutation = useMutation({
+    mutationFn: async () => {
+      await queryClient.removeQueries({ queryKey: ['/api/chatwoot/contacts'] });
+      return await apiRequest("/api/chatwoot/contacts", "GET");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sincronização concluída",
+        description: "A lista de contatos foi atualizada com sucesso.",
+        variant: "default",
+      });
+    },
+    onError: (error) => {
+      console.error("Erro ao sincronizar contatos:", error);
+      toast({
+        title: "Erro na sincronização",
+        description: "Não foi possível sincronizar a lista de contatos.",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Mutação para criar contato
   const createContactMutation = useMutation({
     mutationFn: async (data: NewContactFormValues) => {
@@ -378,6 +402,20 @@ export default function ChatwootContacts({ pipelineStages, settings }: ChatwootC
         <div className="flex justify-between items-center px-4 py-2 bg-white border-b">
           <h2 className="text-lg font-semibold">Contatos do Chatwoot</h2>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={() => syncContactsMutation.mutate()}
+              disabled={syncContactsMutation.isPending}
+            >
+              {syncContactsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span>Sincronizar</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
