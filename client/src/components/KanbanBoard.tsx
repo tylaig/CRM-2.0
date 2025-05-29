@@ -235,14 +235,32 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           
           if (stage.stageType === "completed") {
             // Para estágio "Vendas Realizadas", mostrar TODOS os negócios com status "won"
-            stageDeals = dealsData.filter(deal => 
+            let wonDeals = dealsData.filter(deal => 
               (deal.stageId === stage.id || deal.saleStatus === "won")
             );
+            
+            // Aplicar filtro de performance de vendas se selecionado
+            if (salePerformanceFilter !== "all") {
+              wonDeals = wonDeals.filter(deal => 
+                deal.performanceReason === salePerformanceFilter
+              );
+            }
+            
+            stageDeals = wonDeals;
           } else if (stage.stageType === "lost") {
             // Para estágio "Vendas Perdidas", mostrar TODOS os negócios com status "lost"
-            stageDeals = dealsData.filter(deal => 
+            let lostDeals = dealsData.filter(deal => 
               (deal.stageId === stage.id || deal.saleStatus === "lost")
             );
+            
+            // Aplicar filtro de motivo de perda se selecionado
+            if (lossReasonFilter !== "all") {
+              lostDeals = lostDeals.filter(deal => 
+                deal.lostReason && deal.lostReason.toString() === lossReasonFilter
+              );
+            }
+            
+            stageDeals = lostDeals;
           } else {
             // Para estágios normais, só mostrar negócios deste estágio que NÃO estão completos/perdidos
             stageDeals = dealsData.filter(deal => 
@@ -668,6 +686,63 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
                   <span className="text-sm text-gray-500 dark:text-gray-400">{stage.deals.length} negócios</span>
                   <span className="text-sm font-mono font-medium text-gray-700 dark:text-gray-300">{formatCurrency(stage.totalValue)}</span>
                 </div>
+                
+                {/* Filtros para estágios especiais */}
+                {stage.stageType === "completed" && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <Badge 
+                      variant={salePerformanceFilter === "all" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "all" ? "bg-gray-200 text-gray-800 hover:bg-gray-300" : ""}`}
+                      onClick={() => setSalePerformanceFilter("all")}
+                    >
+                      Todas
+                    </Badge>
+                    <Badge 
+                      variant={salePerformanceFilter === "below" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "below" ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}`}
+                      onClick={() => setSalePerformanceFilter("below")}
+                    >
+                      Abaixo
+                    </Badge>
+                    <Badge 
+                      variant={salePerformanceFilter === "on_target" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "on_target" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : ""}`}
+                      onClick={() => setSalePerformanceFilter("on_target")}
+                    >
+                      Conforme
+                    </Badge>
+                    <Badge 
+                      variant={salePerformanceFilter === "above" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${salePerformanceFilter === "above" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}`}
+                      onClick={() => setSalePerformanceFilter("above")}
+                    >
+                      Acima
+                    </Badge>
+                  </div>
+                )}
+                
+                {stage.stageType === "lost" && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <Badge 
+                      variant={lossReasonFilter === "all" ? "default" : "outline"}
+                      className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${lossReasonFilter === "all" ? "bg-gray-200 text-gray-800 hover:bg-gray-300" : ""}`}
+                      onClick={() => setLossReasonFilter("all")}
+                    >
+                      Todos
+                    </Badge>
+                    
+                    {lossReasons && lossReasons.map((reason: any) => (
+                      <Badge 
+                        key={reason.id}
+                        variant={lossReasonFilter === reason.id.toString() ? "default" : "outline"}
+                        className={`text-[8px] px-1 py-0 h-4 cursor-pointer ${lossReasonFilter === reason.id.toString() ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}`}
+                        onClick={() => setLossReasonFilter(reason.id.toString())}
+                      >
+                        {reason.reason}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 
                 {/* Botão de adicionar negócio removido da coluna */}
               </div>
