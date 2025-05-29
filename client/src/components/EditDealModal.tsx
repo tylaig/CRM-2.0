@@ -654,24 +654,25 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   // Sistema de preservação de dados digitados pelo usuário
   useEffect(() => {
     if (isOpen && deal) {
+      // CORREÇÃO: Usar APENAS as notas do DEAL, nunca as notas do lead
       const latestNotesFromDatabase = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
       console.log("=== SISTEMA DE PRESERVAÇÃO DE DADOS ===");
-      console.log("Deal notes:", deal.notes);
-      console.log("API notes:", dealDataFromApi?.notes);
-      console.log("Latest notes do banco:", latestNotesFromDatabase);
+      console.log("Deal notes (fonte correta):", deal.notes);
+      console.log("API notes (deal fresh):", dealDataFromApi?.notes);
+      console.log("Latest notes do DEAL (decisão final):", latestNotesFromDatabase);
       console.log("Valor atual preservado no campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
       
-      // Armazenar sempre as notas mais recentes do banco para comparação
+      // Armazenar sempre as notas mais recentes do DEAL para comparação
       setLatestNotesFromDB(latestNotesFromDatabase || "");
       
-      // 🔒 ESTRATÉGIA MELHORADA: Sempre usar dados mais recentes do banco quando o modal abre
-      if (notes === "" || notes !== latestNotesFromDatabase) {
-        console.log("🔄 SINCRONIZANDO com dados mais recentes:", latestNotesFromDatabase);
-        setNotes(latestNotesFromDatabase);
+      // SEMPRE usar dados mais recentes do DEAL quando o modal abre
+      if (!isEditingNotes) {
+        console.log("🔄 SINCRONIZANDO com dados mais recentes do DEAL:", latestNotesFromDatabase);
+        setNotes(latestNotesFromDatabase || "");
         setShowRefreshButton(false);
       } else {
-        console.log("✅ Campo já sincronizado - nenhuma ação necessária");
+        console.log("⚠️ Usuário editando - não sobrescrever");
       }
       
       console.log("======================================");
