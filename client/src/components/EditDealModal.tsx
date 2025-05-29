@@ -464,7 +464,29 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   const deleteDealMutation = useMutation({
     mutationFn: async () => {
       if (!deal) return null;
-      return apiRequest(`/api/deals/${deal.id}`, "DELETE");
+      try {
+        const response = await fetch(`/api/deals/${deal.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status === 204) {
+          return true; // Sucesso na exclusão
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao excluir negócio');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Delete deal error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -474,11 +496,11 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao excluir negócio. Por favor tente novamente.",
+        description: error.message || "Falha ao excluir negócio. Por favor tente novamente.",
       });
       console.error("Erro ao excluir deal:", error);
     },
