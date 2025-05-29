@@ -390,9 +390,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
           
           // Registrar atividade de mudança de etapa
           if (existingDeal.stageId !== stageId) {
+            // Buscar todas as etapas (sem filtro de pipeline para garantir que encontremos as etapas antigas e novas)
             const allStages = await storage.getPipelineStages();
             const oldStage = allStages.find(s => s.id === existingDeal.stageId);
             const newStage = allStages.find(s => s.id === stageId);
+            
+            console.log('=== DEBUG MUDANÇA DE ETAPA ===');
+            console.log('Etapa antiga ID:', existingDeal.stageId);
+            console.log('Etapa nova ID:', stageId);
+            console.log('Etapa antiga encontrada:', oldStage);
+            console.log('Etapa nova encontrada:', newStage);
+            console.log('Todas as etapas:', allStages.length);
+            console.log('===============================');
             
             await logActivity(
               targetId,
