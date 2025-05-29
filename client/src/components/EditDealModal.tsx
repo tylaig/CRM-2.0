@@ -350,7 +350,7 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       
       // 1. Remover TODOS os dados em cache relacionados a deals
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
-      queryClient.removeQueries({ queryKey: ['/api/deals', deal?.id] });
+      queryClient.removeQueries({ queryKey: [`/api/deals/${deal?.id}`] });
       
       // 2. Aguardar um momento para garantir que os caches sejam limpos
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -361,13 +361,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         refetchType: 'all'
       });
       await queryClient.invalidateQueries({ 
-        queryKey: ['/api/deals', deal?.id],
+        queryKey: [`/api/deals/${deal?.id}`],
         refetchType: 'all'
       });
       
       // 4. Forçar refetch imediato com dados FRESCOS do servidor
       await queryClient.refetchQueries({ 
-        queryKey: ['/api/deals', deal?.id],
+        queryKey: [`/api/deals/${deal?.id}`],
         type: 'all'
       });
       
@@ -633,12 +633,18 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     if (isOpen && deal?.id) {
       console.log("🧹 LIMPANDO CACHE AO ABRIR MODAL...");
       // Limpar cache imediatamente quando modal abre
-      queryClient.removeQueries({ queryKey: ['/api/deals', deal.id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/deals', deal.id] });
+      queryClient.removeQueries({ queryKey: [`/api/deals/${deal.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${deal.id}`] });
       
       // Forçar busca imediata de dados frescos
       setTimeout(() => {
-        refetchDealData();
+        refetchDealData().then((freshData) => {
+          if (freshData.data?.notes !== undefined && !isEditingNotes) {
+            console.log("🔄 FORÇANDO ATUALIZAÇÃO DE NOTAS COM DADOS FRESCOS:", freshData.data.notes);
+            setNotes(freshData.data.notes || "");
+            setLatestNotesFromDB(freshData.data.notes || "");
+          }
+        });
       }, 100);
       
       console.log("✅ Cache limpo ao abrir modal");
