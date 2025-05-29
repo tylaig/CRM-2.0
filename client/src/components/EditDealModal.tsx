@@ -590,40 +590,44 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     refetchInterval: isOpen && !!deal?.id ? 3000 : false, // 3 segundos
   });
 
-  // Sistema robusto de sincronização de notas com verificação em tempo real
+  // Sistema de preservação de dados digitados pelo usuário
   useEffect(() => {
     if (isOpen && deal) {
-      // SEMPRE usar os dados da API se disponíveis, pois são os mais recentes
       const latestNotesFromDatabase = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
-      console.log("=== USEEFFECT ATUALIZANDO NOTES ===");
+      console.log("=== SISTEMA DE PRESERVAÇÃO DE DADOS ===");
       console.log("Deal notes:", deal.notes);
       console.log("API notes:", dealDataFromApi?.notes);
-      console.log("Latest notes escolhido:", latestNotesFromDatabase);
-      console.log("Valor atual do campo:", notes);
+      console.log("Latest notes do banco:", latestNotesFromDatabase);
+      console.log("Valor atual preservado no campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
       
-      // Armazenar sempre as notas mais recentes do banco
+      // Armazenar sempre as notas mais recentes do banco para comparação
       setLatestNotesFromDB(latestNotesFromDatabase || "");
       
-      // CORREÇÃO: SEMPRE sincronizar quando o modal abre pela primeira vez
-      // ou quando não estiver editando
-      if (!isEditingNotes || notes === "") {
-        console.log("🔄 SINCRONIZANDO NOTAS:", latestNotesFromDatabase);
-        setNotes(latestNotesFromDatabase || "");
+      // 🔒 NOVA ESTRATÉGIA: PRESERVAR SEMPRE O QUE O USUÁRIO DIGITOU
+      // Só sincronizar na primeira vez que o modal abre (quando notes está vazio)
+      if (notes === "" && latestNotesFromDatabase) {
+        console.log("✅ PRIMEIRA SINCRONIZAÇÃO (campo vazio):", latestNotesFromDatabase);
+        setNotes(latestNotesFromDatabase);
         setShowRefreshButton(false);
       } else {
-        // Se estiver editando e há dados diferentes, mostrar botão
-        const hasRealDifferences = notes !== latestNotesFromDatabase && 
-                                  latestNotesFromDatabase !== "" && 
-                                  notes !== "";
-        setShowRefreshButton(hasRealDifferences);
-        console.log("🔍 Verificação de diferenças:");
-        console.log("- notes campo:", `"${notes}"`);
-        console.log("- latestNotesFromDatabase:", `"${latestNotesFromDatabase}"`);
-        console.log("- hasRealDifferences:", hasRealDifferences);
+        // Verificar se há diferenças para mostrar botão de atualização
+        const hasDifferences = notes !== latestNotesFromDatabase && 
+                              latestNotesFromDatabase !== "" && 
+                              notes !== "" &&
+                              !isEditingNotes;
+        setShowRefreshButton(hasDifferences);
+        
+        if (hasDifferences) {
+          console.log("🔔 DIFERENÇAS DETECTADAS - mostrando botão:");
+          console.log("- Campo atual:", `"${notes}"`);
+          console.log("- Banco de dados:", `"${latestNotesFromDatabase}"`);
+        } else {
+          console.log("✅ Campo preservado - nenhuma ação necessária");
+        }
       }
       
-      console.log("===================================");
+      console.log("======================================");
     }
   }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
 
