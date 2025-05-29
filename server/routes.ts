@@ -442,7 +442,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
               await logActivity(
                 targetId,
                 'stage_change',
-                `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`
+                `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`,
+                req.user?.id
               );
               
               // Broadcast para invalidar cache de atividades
@@ -455,7 +456,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
               await logActivity(
                 targetId,
                 'stage_change',
-                `Negócio movido entre etapas (ID ${existingDeal.stageId} → ${stageId})`
+                `Negócio movido entre etapas (ID ${existingDeal.stageId} → ${stageId})`,
+                req.user?.id
               );
             }
           }
@@ -475,7 +477,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
               await logActivity(
                 targetId,
                 'pipeline_change',
-                `Negócio movido do pipeline "${oldPipeline?.name || 'Desconhecido'}" para "${newPipeline?.name || 'Desconhecido'}"`
+                `Negócio movido do pipeline "${oldPipeline?.name || 'Desconhecido'}" para "${newPipeline?.name || 'Desconhecido'}"`,
+                req.user?.id
               );
             }
           }
@@ -520,7 +523,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
           await logActivity(
             targetId,
             'sale_won',
-            `Negócio marcado como Venda Realizada${reasonText}`
+            `Negócio marcado como Venda Realizada${reasonText}`,
+            req.user?.id
           );
         } else if (validatedData.saleStatus === 'lost' && lostStage) {
           validatedData.stageId = lostStage.id;
@@ -534,7 +538,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
           await logActivity(
             targetId,
             'sale_lost',
-            `Negócio marcado como Venda Perdida${reasonText}`
+            `Negócio marcado como Venda Perdida${reasonText}`,
+            req.user?.id
           );
         }
       }
@@ -1654,7 +1659,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
       await logActivity(
         validatedData.dealId,
         'quote_item_added',
-        `Item adicionado à cotação: ${validatedData.description} (Qtd: ${validatedData.quantity}, Valor: R$ ${validatedData.unitPrice.toFixed(2)})`
+        `Item adicionado à cotação: ${validatedData.description} (Qtd: ${validatedData.quantity}, Valor: R$ ${validatedData.unitPrice.toFixed(2)})`,
+        req.user?.id
       );
       
       // Broadcast para cotação atualizada
