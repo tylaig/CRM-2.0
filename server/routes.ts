@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Adicionar timestamp para evitar cache
       try {
         const timestamp = Date.now();
-        const largePageUrl = `${chatwootApiUrl}?per_page=100&page=1&_t=${timestamp}`;
+        const largePageUrl = `${chatwootApiUrl}?per_page=100&page=1&sort=created_at&order=desc&_t=${timestamp}`;
         console.log(`Fetching large page: ${largePageUrl}`);
         
         const largeResponse = await axios.get(largePageUrl, {
