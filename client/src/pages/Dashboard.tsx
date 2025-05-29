@@ -34,17 +34,23 @@ export default function Dashboard() {
   // Função para atualizar o kanban manualmente
   const handleRefreshKanban = async () => {
     try {
-      // Limpar completamente todos os caches de deals
+      // Limpar completamente todos os caches relacionados
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
+      queryClient.removeQueries({ queryKey: ['/api/pipeline-stages'] });
       
       // Aguardar a limpeza
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Forçar refetch de todas as queries ativas
-      await queryClient.invalidateQueries({ 
-        queryKey: ['/api/deals'],
-        refetchType: 'all' 
-      });
+      // Forçar refetch de todas as queries necessárias
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['/api/deals'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/pipeline-stages'] }),
+      ]);
+      
+      // Aguardar mais um pouco e fazer um segundo refetch para garantir
+      setTimeout(async () => {
+        await queryClient.refetchQueries({ queryKey: ['/api/deals'] });
+      }, 300);
       
       toast({
         title: "Dados atualizados",
