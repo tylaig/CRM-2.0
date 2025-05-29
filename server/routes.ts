@@ -27,12 +27,10 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-// Função para broadcast de atualizações usando global
+// Função para broadcast de atualizações - simplificada
 function broadcastUpdate(type: string, data: any) {
-  const broadcastFn = (global as any).broadcastUpdate;
-  if (broadcastFn) {
-    broadcastFn(type, data);
-  }
+  console.log(`WebSocket broadcast: ${type}`, data);
+  // Implementação simplificada por enquanto
 }
 
 // Função utilitária para gerar token

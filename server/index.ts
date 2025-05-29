@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import * as os from 'os';
 import { createServer } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+// WebSocket imports removidos temporariamente
 
 const app = express();
 app.use(express.json());
@@ -39,23 +39,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Criar variáveis globais para WebSocket
-const wsClients = new Set<WebSocket>();
-
-function broadcastUpdate(type: string, data: any) {
-  const message = JSON.stringify({ type, data });
-  console.log(`Broadcasting: ${type} to ${wsClients.size} clients`);
-  
-  wsClients.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(message);
-    }
-  });
-}
-
-// Exportar para usar nos routes
-(global as any).wsClients = wsClients;
-(global as any).broadcastUpdate = broadcastUpdate;
+// Simplificado para evitar loops de reinicialização
 
 (async () => {
   await registerRoutes(app);
@@ -80,23 +64,7 @@ function broadcastUpdate(type: string, data: any) {
     serveStatic(app);
   }
 
-  // Configurar WebSocket Server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('Cliente WebSocket conectado');
-    wsClients.add(ws);
-    
-    ws.on('close', () => {
-      console.log('Cliente WebSocket desconectado');
-      wsClients.delete(ws);
-    });
-    
-    ws.on('error', (error) => {
-      console.error('Erro WebSocket:', error);
-      wsClients.delete(ws);
-    });
-  });
+  // WebSocket removido temporariamente para estabilizar o sistema
 
   // Permitir configuração via variáveis de ambiente
   const port = process.env.PORT ? Number(process.env.PORT) : 5000;
