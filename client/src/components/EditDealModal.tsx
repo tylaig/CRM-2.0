@@ -351,15 +351,24 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
       queryClient.removeQueries({ queryKey: ['/api/deals', deal?.id] });
       
-      // 2. Invalidar TODOS os caches
-      await queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/deals', deal?.id] });
+      // 2. Aguardar um momento para garantir que os caches sejam limpos
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 3. Aguardar um momento para garantir que os caches sejam limpos
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // 3. Invalidar TODOS os caches com refetch forçado
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/deals'],
+        refetchType: 'all'
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/deals', deal?.id],
+        refetchType: 'all'
+      });
       
       // 4. Forçar refetch imediato com dados FRESCOS do servidor
-      await queryClient.refetchQueries({ queryKey: ['/api/deals', deal?.id] });
+      await queryClient.refetchQueries({ 
+        queryKey: ['/api/deals', deal?.id],
+        type: 'all'
+      });
       
       console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados");
       

@@ -41,15 +41,22 @@ export function useWebSocket() {
           switch (message.type) {
             case 'deal:updated':
               console.log('Deal atualizado via WebSocket:', message.data);
-              // Invalidar todas as queries relacionadas a deals para forçar refetch
-              queryClient.invalidateQueries({ 
-                queryKey: ['/api/deals'],
-                refetchType: 'active' 
-              });
-              queryClient.invalidateQueries({ 
-                queryKey: ['/api/deals', message.data.dealId],
-                refetchType: 'active' 
-              });
+              
+              // Limpar completamente o cache antes de invalidar
+              queryClient.removeQueries({ queryKey: ['/api/deals'] });
+              
+              // Aguardar um momento para garantir limpeza
+              setTimeout(() => {
+                // Invalidar todas as queries relacionadas a deals para forçar refetch
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/deals'],
+                  refetchType: 'active' 
+                });
+                queryClient.invalidateQueries({ 
+                  queryKey: ['/api/deals', message.data.dealId],
+                  refetchType: 'active' 
+                });
+              }, 100);
               break;
               
             case 'deal:created':
