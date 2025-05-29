@@ -344,13 +344,24 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         typingTimeout.current = null;
       }
       
-      // 🔥 LIMPEZA FORÇADA DO CACHE PARA RESOLVER PROBLEMA DE SINCRONIZAÇÃO
-      console.log("🧹 LIMPANDO CACHE COMPLETAMENTE...");
+      // 🔥 CORREÇÃO DEFINITIVA: LIMPEZA TOTAL E FORÇADA DO CACHE
+      console.log("🧹 LIMPEZA TOTAL DO CACHE - INICIANDO...");
+      
+      // 1. Remover TODOS os dados em cache relacionados a deals
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
       queryClient.removeQueries({ queryKey: ['/api/deals', deal?.id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/deals', deal?.id] });
-      console.log("✅ Cache limpo - dados sempre atualizados");
+      
+      // 2. Invalidar TODOS os caches
+      await queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/deals', deal?.id] });
+      
+      // 3. Aguardar um momento para garantir que os caches sejam limpos
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // 4. Forçar refetch imediato com dados FRESCOS do servidor
+      await queryClient.refetchQueries({ queryKey: ['/api/deals', deal?.id] });
+      
+      console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados");
       
       toast({
         title: "Sucesso!",
