@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
       
       // Buscar todos os negócios associados a este estágio
-      const associatedDeals = await storage.getDeals({ stageId: id });
+      const associatedDeals = await storage.getDeals(undefined, id);
       
       if (associatedDeals.length > 0) {
         // Buscar o primeiro estágio do mesmo pipeline
