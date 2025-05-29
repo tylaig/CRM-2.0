@@ -22,9 +22,10 @@ interface AddStageModalProps {
   isOpen: boolean;
   onClose: () => void;
   pipelineStages: PipelineStage[];
+  pipelineId: number;
 }
 
-export default function AddStageModal({ isOpen, onClose, pipelineStages }: AddStageModalProps) {
+export default function AddStageModal({ isOpen, onClose, pipelineStages, pipelineId }: AddStageModalProps) {
   const [name, setName] = useState("");
   const { toast } = useToast();
   
@@ -37,7 +38,8 @@ export default function AddStageModal({ isOpen, onClose, pipelineStages }: AddSt
       
       const payload = {
         name,
-        order: nextOrder
+        order: nextOrder,
+        pipelineId: pipelineId
       };
       // Corrigindo a ordem dos parâmetros para corresponder à função apiRequest
       return await apiRequest('/api/pipeline-stages', 'POST', payload);

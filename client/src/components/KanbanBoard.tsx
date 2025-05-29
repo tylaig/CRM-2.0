@@ -563,6 +563,7 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           isOpen={isAddStageModalOpen}
           onClose={() => setIsAddStageModalOpen(false)}
           pipelineStages={pipelineStages}
+          pipelineId={activePipelineId}
         />
         
         {selectedDeal && (
