@@ -86,9 +86,16 @@ export default function QuoteManager({ dealId, onSelectQuote }: QuoteManagerProp
     mutationFn: async (item: Omit<QuoteItem, 'id' | 'createdAt'>) => {
       return apiRequest("/api/quote-items", "POST", item);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/quote-items/${dealId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+    onSuccess: async () => {
+      // Aguardar a invalidação das cotações primeiro
+      await queryClient.invalidateQueries({ queryKey: [`/api/quote-items/${dealId}`] });
+      
+      // Depois invalidar e recarregar os negócios para mostrar o valor atualizado
+      await queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+      
+      // Forçar refetch imediato
+      await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
     },
     onError: (error) => {
       toast({
@@ -105,9 +112,17 @@ export default function QuoteManager({ dealId, onSelectQuote }: QuoteManagerProp
     mutationFn: async (id: number) => {
       return apiRequest(`/api/quote-items/${id}`, "DELETE");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/quote-items/${dealId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+    onSuccess: async () => {
+      // Aguardar a invalidação das cotações primeiro
+      await queryClient.invalidateQueries({ queryKey: [`/api/quote-items/${dealId}`] });
+      
+      // Depois invalidar e recarregar os negócios para mostrar o valor atualizado
+      await queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+      
+      // Forçar refetch imediato
+      await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
+      
       toast({
         title: "Item removido",
         description: "Item da cotação removido com sucesso.",
