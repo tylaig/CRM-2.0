@@ -1,4 +1,17 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
+
+// Estender a interface Request para incluir user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        email: string;
+        role: string;
+      };
+    }
+  }
+}
 import { storage } from "./storage";
 import { db } from "./db";
 import axios from "axios";
@@ -36,13 +49,31 @@ function broadcastUpdate(type: string, data: any) {
 }
 
 // Função para registrar atividades automaticamente
-async function logActivity(dealId: number, activityType: string, description: string, createdBy?: string) {
+async function logActivity(dealId: number, activityType: string, description: string, userId?: number) {
   try {
+    let createdBy = 'system';
+    
+    // Se um userId foi fornecido, buscar o email do usuário via API
+    if (userId) {
+      try {
+        const users = await storage.getUsers();
+        const user = users.find(u => u.id === userId);
+        if (user) {
+          createdBy = user.email;
+        } else {
+          createdBy = `User ID ${userId}`;
+        }
+      } catch (error) {
+        console.error('Erro ao buscar usuário para atividade:', error);
+        createdBy = `User ID ${userId}`;
+      }
+    }
+    
     await storage.createLeadActivity({
       dealId,
       activityType,
       description,
-      createdBy: createdBy || 'system'
+      createdBy
     });
   } catch (error) {
     console.error('Erro ao registrar atividade:', error);
@@ -565,7 +596,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
           await logActivity(
             targetId,
             'stage_moved',
-            `Lead movido de "${oldStageName}" para "${newStageName}"`
+            `Lead movido de "${oldStageName}" para "${newStageName}"`,
+            req.user?.id
           );
           
           console.log(`Atividade registrada: ${oldStageName} → ${newStageName}`);
