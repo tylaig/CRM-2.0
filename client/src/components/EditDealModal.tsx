@@ -109,8 +109,10 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
   const [addressNumber, setAddressNumber] = useState("");
   const [addressComplement, setAddressComplement] = useState("");
   
-  // Campo de notas
+  // Campo de notas com controle de sincronização
   const [notes, setNotes] = useState("");
+  const [latestNotesFromDB, setLatestNotesFromDB] = useState("");
+  const [showRefreshButton, setShowRefreshButton] = useState(false);
   const [neighborhood, setNeighborhood] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -563,6 +565,18 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     typingTimeout.current = setTimeout(() => setIsEditingNotes(false), 10000);
   };
 
+  // Função para atualizar o campo com os dados mais recentes do banco
+  const handleRefreshNotes = () => {
+    console.log("🔄 Atualizando notas com dados do banco:", latestNotesFromDB);
+    setNotes(latestNotesFromDB);
+    setShowRefreshButton(false);
+    setIsEditingNotes(false);
+    toast({
+      title: "Notas atualizadas",
+      description: "Campo sincronizado com os dados mais recentes do banco.",
+    });
+  };
+
   // Pooling: buscar o deal atualizado do backend enquanto o modal estiver aberto
   const {
     data: dealDataFromApi,
@@ -574,21 +588,35 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     refetchInterval: isOpen && !!deal?.id ? 3000 : false, // 3 segundos
   });
 
-  // Atualizar o campo notes sempre que receber dados atualizados
+  // Sistema robusto de sincronização de notas com verificação em tempo real
   useEffect(() => {
-    if (isOpen && deal && !isEditingNotes) {
+    if (isOpen && deal) {
       // SEMPRE usar os dados da API se disponíveis, pois são os mais recentes
-      const latestNotes = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
+      const latestNotesFromDatabase = dealDataFromApi?.notes !== undefined ? dealDataFromApi.notes : deal.notes || "";
       console.log("=== USEEFFECT ATUALIZANDO NOTES ===");
       console.log("Deal notes:", deal.notes);
       console.log("API notes:", dealDataFromApi?.notes);
-      console.log("Latest notes escolhido:", latestNotes);
+      console.log("Latest notes escolhido:", latestNotesFromDatabase);
       console.log("Valor atual do campo:", notes);
       console.log("isEditingNotes:", isEditingNotes);
+      
+      // Armazenar sempre as notas mais recentes do banco
+      setLatestNotesFromDB(latestNotesFromDatabase || "");
+      
+      // Se não estiver editando, sincronizar automaticamente
+      if (!isEditingNotes) {
+        setNotes(latestNotesFromDatabase || "");
+        setShowRefreshButton(false);
+      } else {
+        // Se estiver editando, verificar se há diferenças
+        const hasDifferences = notes !== latestNotesFromDatabase && latestNotesFromDatabase !== "";
+        setShowRefreshButton(hasDifferences);
+        console.log("Diferenças detectadas (editando):", hasDifferences);
+      }
+      
       console.log("===================================");
-      setNotes(latestNotes || "");
     }
-  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes]);
+  }, [isOpen, deal?.id, deal?.notes, dealDataFromApi?.notes, isEditingNotes, notes]);
 
   // Não atualizar automaticamente com dados do backend para evitar sobrescrever edições
   // O refetch automático será usado apenas para verificar mudanças, não para atualizar o form
@@ -993,7 +1021,25 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           {/* Tab Notas */}
           <TabsContent value="notes" className="p-1">
             <div className="grid gap-4 py-2">
-              <h3 className="text-lg font-medium">Notas do Negócio</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Notas do Negócio</h3>
+                {showRefreshButton && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefreshNotes}
+                    className="flex items-center gap-2 text-orange-600 border-orange-200 hover:bg-orange-50"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Atualizar do Banco
+                  </Button>
+                )}
+              </div>
+              {showRefreshButton && (
+                <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded border border-orange-200">
+                  ⚠️ As notas no banco foram atualizadas por outro usuário. Clique em "Atualizar do Banco" para sincronizar.
+                </div>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="deal-notes">Anotações</Label>
                 <textarea
