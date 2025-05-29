@@ -1,195 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-interface WebSocketMessage {
-  type: string;
-  data: any;
-}
-
 export function useWebSocket() {
-  const ws = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout>();
 
-  const connect = () => {
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      return; // Já conectado
-    }
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    try {
-      ws.current = new WebSocket(wsUrl);
-      
-      ws.current.onopen = () => {
-        console.log('WebSocket conectado');
-        setIsConnected(true);
-        // Limpar timeout de reconexão se existir
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-      };
-
-      ws.current.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('Mensagem WebSocket recebida:', message);
-          
-          // Processar diferentes tipos de mensagens
-          switch (message.type) {
-            case 'deal:updated':
-              console.log('Deal atualizado via WebSocket:', message.data);
-              
-              // Invalidar todos os dados relacionados a deals
-              queryClient.invalidateQueries({ 
-                queryKey: ['/api/deals'],
-                refetchType: 'all' 
-              });
-              
-              // Se houver dealId específico, invalidar dados específicos
-              if (message.data.dealId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/deals', message.data.dealId],
-                  refetchType: 'all' 
-                });
-                
-                // Invalidar atividades se foi mudança de etapa
-                if (message.data.action === 'stage_moved') {
-                  queryClient.invalidateQueries({ 
-                    queryKey: ['/api/lead-activities', message.data.dealId],
-                    refetchType: 'all' 
-                  });
-                }
-                
-                // Invalidar cotações se houve mudança de valor
-                if (message.data.action === 'value_updated') {
-                  queryClient.invalidateQueries({ 
-                    queryKey: ['/api/quote-items', message.data.dealId],
-                    refetchType: 'all' 
-                  });
-                }
-              }
-              
-              console.log('✅ Cache de deals atualizado via WebSocket');
-              break;
-              
-            case 'activities:updated':
-              console.log('Atividades atualizadas via WebSocket:', message.data);
-              if (message.data.dealId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/lead-activities', message.data.dealId],
-                  refetchType: 'all' 
-                });
-              }
-              console.log('✅ Cache de atividades atualizado via WebSocket');
-              break;
-              
-            case 'notes:updated':
-              console.log('Notas atualizadas via WebSocket:', message.data);
-              if (message.data.dealId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/deals', message.data.dealId],
-                  refetchType: 'all' 
-                });
-              }
-              console.log('✅ Cache de notas atualizado via WebSocket');
-              break;
-              
-            case 'pipeline:changed':
-              console.log('Pipeline alterado via WebSocket:', message.data);
-              // Invalidar todos os dados quando pipeline muda
-              queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/pipeline-stages'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/pipelines'] });
-              console.log('✅ Cache de pipeline atualizado via WebSocket');
-              break;
-              
-            case 'quote:updated':
-              console.log('Cotação atualizada via WebSocket:', message.data);
-              if (message.data.dealId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/quote-items', message.data.dealId],
-                  refetchType: 'all' 
-                });
-                queryClient.invalidateQueries({ 
-                  queryKey: ['/api/deals', message.data.dealId],
-                  refetchType: 'all' 
-                });
-              }
-              console.log('✅ Cache de cotações atualizado via WebSocket');
-              break;
-              
-            case 'deal:created':
-              console.log('Deal criado via WebSocket:', message.data);
-              queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
-              break;
-              
-            case 'deal:deleted':
-              console.log('Deal deletado via WebSocket:', message.data);
-              queryClient.invalidateQueries({ queryKey: ['/api/deals'] });
-              break;
-              
-            case 'lead:updated':
-              console.log('Lead atualizado via WebSocket:', message.data);
-              queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
-              if (message.data.leadId) {
-                queryClient.invalidateQueries({ queryKey: ['/api/leads', message.data.leadId] });
-              }
-              break;
-              
-            default:
-              console.log('Tipo de mensagem WebSocket não reconhecido:', message.type);
-          }
-        } catch (error) {
-          console.error('Erro ao processar mensagem WebSocket:', error);
-        }
-      };
-
-      ws.current.onclose = () => {
-        console.log('WebSocket desconectado');
-        setIsConnected(false);
-        // Tentar reconectar após 3 segundos
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Tentando reconectar WebSocket...');
-          connect();
-        }, 3000);
-      };
-
-      ws.current.onerror = (error) => {
-        console.error('Erro WebSocket:', error);
-        setIsConnected(false);
-      };
-      
-    } catch (error) {
-      console.error('Erro ao conectar WebSocket:', error);
-      setIsConnected(false);
-    }
+  // Sistema de polling automático para atualizar dados em tempo real
+  const startPolling = () => {
+    // Fazer polling a cada 3 segundos para manter dados atualizados
+    intervalRef.current = setInterval(() => {
+      // Invalidar os caches principais para refrescar os dados
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/deals'],
+        refetchType: 'active' 
+      });
+    }, 3000);
   };
 
-  const disconnect = () => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
+  const stopPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
     }
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
-    }
-    setIsConnected(false);
   };
 
   useEffect(() => {
-    connect();
+    startPolling();
     
     return () => {
-      disconnect();
+      stopPolling();
     };
-  }, []);
+  }, [queryClient]);
+
+  // Função para forçar atualização imediata
+  const forceUpdate = () => {
+    queryClient.invalidateQueries({ 
+      queryKey: ['/api/deals'],
+      refetchType: 'all' 
+    });
+  };
 
   return {
-    isConnected,
-    connect,
-    disconnect
+    isConnected: true, // Sempre "conectado" com polling
+    forceUpdate
   };
 }

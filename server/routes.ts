@@ -29,41 +29,10 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
-// WebSocket clients conectados
-const wsClients = new Set<any>();
-
-// Função para adicionar cliente WebSocket
-export function addWebSocketClient(client: any) {
-  wsClients.add(client);
-  console.log(`Cliente WebSocket adicionado. Total: ${wsClients.size}`);
-}
-
-// Função para remover cliente WebSocket
-export function removeWebSocketClient(client: any) {
-  wsClients.delete(client);
-  console.log(`Cliente WebSocket removido. Total: ${wsClients.size}`);
-}
-
-// Função para broadcast de atualizações
+// Função simplificada para broadcast - logs apenas por enquanto
 function broadcastUpdate(type: string, data: any) {
-  console.log(`WebSocket broadcast: ${type}`, data);
-  
-  const message = JSON.stringify({ type, data });
-  
-  // Enviar para todos os clientes conectados
-  wsClients.forEach(client => {
-    if (client.readyState === 1) { // WebSocket.OPEN = 1
-      try {
-        client.send(message);
-        console.log(`Mensagem enviada via WebSocket: ${type}`);
-      } catch (error) {
-        console.error('Erro ao enviar mensagem WebSocket:', error);
-        wsClients.delete(client);
-      }
-    } else {
-      wsClients.delete(client);
-    }
-  });
+  console.log(`Broadcast simulado: ${type}`, data);
+  // Implementação WebSocket será adicionada posteriormente
 }
 
 // Função para registrar atividades automaticamente
