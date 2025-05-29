@@ -175,6 +175,8 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
           params.append('userId', userId.toString());
         }
         
+        // Adicionar timestamp para forçar busca sem cache
+        params.append('_t', Date.now().toString());
         url += `?${params.toString()}`;
         
         dealsData = await apiRequest(url, 'GET');
@@ -266,6 +268,16 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
     };
     
     fetchDeals();
+    
+    // Criar polling mais agressivo para atualizações em tempo real
+    const pollingInterval = setInterval(() => {
+      console.log("🔄 Polling: Verificando atualizações do kanban...");
+      fetchDeals();
+    }, 2000); // A cada 2 segundos
+    
+    return () => {
+      clearInterval(pollingInterval);
+    };
   }, [activePipelineId, pipelineStages.length, filters?.search, filters?.status, filters?.sortBy, filters?.sortOrder, filters?.hideClosed, filters?.stageId, filters?.winReason, filters?.lostReason, userId]);
   
   const onDragEnd = async (result: DropResult) => {
