@@ -33,6 +33,20 @@ function broadcastUpdate(type: string, data: any) {
   // Implementação simplificada por enquanto
 }
 
+// Função para registrar atividades automaticamente
+async function logActivity(dealId: number, activityType: string, description: string, createdBy?: string) {
+  try {
+    await storage.createLeadActivity({
+      dealId,
+      activityType,
+      description,
+      createdBy: createdBy || 'system'
+    });
+  } catch (error) {
+    console.error('Erro ao registrar atividade:', error);
+  }
+}
+
 // Função utilitária para gerar token
 function generateToken(user: any) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
@@ -1474,6 +1488,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
     try {
       const validatedData = insertQuoteItemSchema.parse(req.body);
       const item = await storage.createQuoteItem(validatedData);
+      
+      // Registrar atividade de adição de item na cotação
+      await logActivity(
+        validatedData.dealId,
+        'quote_item_added',
+        `Item adicionado à cotação: ${validatedData.description} (Qtd: ${validatedData.quantity}, Valor: R$ ${validatedData.unitPrice.toFixed(2)})`
+      );
+      
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
