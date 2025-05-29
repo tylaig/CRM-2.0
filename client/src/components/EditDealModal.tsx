@@ -348,10 +348,11 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // 🔥 CORREÇÃO DEFINITIVA: LIMPEZA TOTAL E FORÇADA DO CACHE (INCLUINDO LEADS)
       console.log("🧹 LIMPEZA TOTAL DO CACHE - INICIANDO...");
       
-      // 1. Remover TODOS os dados em cache relacionados a deals E leads
+      // 1. Remover TODOS os dados em cache relacionados a deals, leads E atividades
       queryClient.removeQueries({ queryKey: ['/api/deals'] });
       queryClient.removeQueries({ queryKey: [`/api/deals/${deal?.id}`] });
       queryClient.removeQueries({ queryKey: [`/api/leads/${deal?.leadId}`] });
+      queryClient.removeQueries({ queryKey: [`/api/lead-activities/${deal?.id}`] });
       
       // 2. Aguardar um momento para garantir que os caches sejam limpos
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -369,6 +370,10 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         queryKey: [`/api/leads/${deal?.leadId}`],
         refetchType: 'all'
       });
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/lead-activities/${deal?.id}`],
+        refetchType: 'all'
+      });
       
       // 4. Forçar refetch imediato com dados FRESCOS do servidor
       await queryClient.refetchQueries({ 
@@ -379,8 +384,12 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
         queryKey: [`/api/leads/${deal?.leadId}`],
         type: 'all'
       });
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/lead-activities/${deal?.id}`],
+        type: 'all'
+      });
       
-      console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados (deals + leads)");
+      console.log("✅ CACHE TOTALMENTE LIMPO - Dados garantidamente atualizados (deals + leads + atividades)");
       
       toast({
         title: "Sucesso!",

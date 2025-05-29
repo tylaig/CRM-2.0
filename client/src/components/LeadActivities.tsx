@@ -43,6 +43,10 @@ export default function LeadActivities({ deal }: LeadActivitiesProps) {
       return (response as unknown) as LeadActivity[];
     },
     enabled: !!deal?.id,
+    refetchInterval: deal?.id ? 3000 : false, // Polling a cada 3 segundos
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Sempre considerar dados como obsoletos
+    gcTime: 0 // Não manter cache
   });
   
   // Garantir que sempre seja um array, mesmo se a API retornar algo inesperado
