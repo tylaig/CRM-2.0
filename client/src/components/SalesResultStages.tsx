@@ -211,13 +211,13 @@ export default function SalesResultStages({ pipelineStages, filters }: SalesResu
                   </div>
                   
                   <div className={`
-                    ${deal.salePerformance === 'below_quote' ? 'performance-below' : ''}
-                    ${deal.salePerformance === 'according_to_quote' ? 'performance-according' : ''}
-                    ${deal.salePerformance === 'above_quote' ? 'performance-above' : ''}
+                    ${deal.salePerformance === 'below' ? 'performance-below' : ''}
+                    ${deal.salePerformance === 'on_target' ? 'performance-according' : ''}
+                    ${deal.salePerformance === 'above' ? 'performance-above' : ''}
                   `}>
-                    {deal.salePerformance === 'below_quote' && 'Abaixo da cotação'}
-                    {deal.salePerformance === 'according_to_quote' && 'De acordo com a cotação'}
-                    {deal.salePerformance === 'above_quote' && 'Acima da cotação'}
+                    {deal.salePerformance === 'below' && 'Abaixo da cotação'}
+                    {deal.salePerformance === 'on_target' && 'Conforme a cotação'}
+                    {deal.salePerformance === 'above' && 'Acima da cotação'}
                     {!deal.salePerformance && 'Não categorizado'}
                   </div>
                 </div>
@@ -261,9 +261,9 @@ export default function SalesResultStages({ pipelineStages, filters }: SalesResu
               {lossReasons && lossReasons.map((reason: any) => (
                 <Badge 
                   key={reason.id}
-                  variant={lossReasonFilter === reason.reason ? "default" : "outline"}
-                  className={lossReasonFilter === reason.reason ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}
-                  onClick={() => setLossReasonFilter(reason.reason)}
+                  variant={lossReasonFilter === reason.id.toString() ? "default" : "outline"}
+                  className={lossReasonFilter === reason.id.toString() ? "bg-red-100 text-red-800 hover:bg-red-200" : ""}
+                  onClick={() => setLossReasonFilter(reason.id.toString())}
                   style={{ cursor: "pointer" }}
                 >
                   {reason.reason}
