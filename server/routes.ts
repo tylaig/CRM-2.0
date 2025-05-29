@@ -631,6 +631,104 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
   
+  // Endpoint de diagnóstico para debug da API Chatwoot
+  apiRouter.get("/chatwoot/debug", async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      
+      if (!settings || !settings.chatwootApiKey || !settings.chatwootUrl || !settings.accountId) {
+        return res.status(400).json({ message: "Chatwoot API not configured" });
+      }
+      
+      console.log("=== CHATWOOT DEBUG ===");
+      console.log("URL:", settings.chatwootUrl);
+      console.log("Account ID:", settings.accountId);
+      console.log("API Key length:", settings.chatwootApiKey?.length);
+      
+      // Testar endpoint de contatos com diferentes parâmetros
+      const debugResults = [];
+      
+      // Teste 1: Busca básica
+      try {
+        const basicUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts`;
+        console.log("Testing basic URL:", basicUrl);
+        
+        const basicResponse = await axios.get(basicUrl, {
+          headers: { 'api_access_token': settings.chatwootApiKey }
+        });
+        
+        debugResults.push({
+          test: "basic_fetch",
+          url: basicUrl,
+          status: basicResponse.status,
+          contacts_count: basicResponse.data?.payload?.length || 0,
+          meta: basicResponse.data?.meta
+        });
+      } catch (error) {
+        debugResults.push({
+          test: "basic_fetch",
+          error: error.response?.data || error.message
+        });
+      }
+      
+      // Teste 2: Com paginação explícita
+      try {
+        const paginatedUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}/contacts?page=1&per_page=50`;
+        console.log("Testing paginated URL:", paginatedUrl);
+        
+        const paginatedResponse = await axios.get(paginatedUrl, {
+          headers: { 'api_access_token': settings.chatwootApiKey }
+        });
+        
+        debugResults.push({
+          test: "paginated_fetch",
+          url: paginatedUrl,
+          status: paginatedResponse.status,
+          contacts_count: paginatedResponse.data?.payload?.length || 0,
+          meta: paginatedResponse.data?.meta
+        });
+      } catch (error) {
+        debugResults.push({
+          test: "paginated_fetch",
+          error: error.response?.data || error.message
+        });
+      }
+      
+      // Teste 3: Buscar conta para verificar configuração
+      try {
+        const accountUrl = `${settings.chatwootUrl}/api/v1/accounts/${settings.accountId}`;
+        console.log("Testing account URL:", accountUrl);
+        
+        const accountResponse = await axios.get(accountUrl, {
+          headers: { 'api_access_token': settings.chatwootApiKey }
+        });
+        
+        debugResults.push({
+          test: "account_info",
+          url: accountUrl,
+          status: accountResponse.status,
+          account_data: accountResponse.data
+        });
+      } catch (error) {
+        debugResults.push({
+          test: "account_info",
+          error: error.response?.data || error.message
+        });
+      }
+      
+      console.log("Debug results:", JSON.stringify(debugResults, null, 2));
+      
+      res.json({
+        message: "Chatwoot API Debug Results",
+        results: debugResults
+      });
+      
+    } catch (error) {
+      console.error("Debug error:", error);
+      res.status(500).json({ message: "Debug failed", error: error.message });
+    }
+  });
+
   // Rota para criar novo contato no Chatwoot
   apiRouter.post("/chatwoot/contacts", async (req: Request, res: Response) => {
     try {
