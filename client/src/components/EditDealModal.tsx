@@ -439,9 +439,6 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
           ]) : Promise.resolve()
       ]);
       
-      // Fechar o modal imediatamente
-      onClose();
-      
       // CORREÇÃO: Forçar refetch imediato dos dados específicos do deal
       await refetchDealData();
       
