@@ -791,8 +791,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         }
       };
       
+      console.log("Criando contato com dados:", JSON.stringify(contactData, null, 2));
+      
       // Criar o contato no Chatwoot
       const chatwootApiUrl = `${finalUrl}/api/v1/accounts/${finalAccountId}/contacts`;
+      console.log("URL de criação:", chatwootApiUrl);
+      
       const response = await axios.post(
         chatwootApiUrl,
         contactData,
@@ -803,6 +807,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
           }
         }
       );
+      
+      console.log("Resposta do Chatwoot:", {
+        status: response.status,
+        data: response.data
+      });
       
       // Verificar se o contato foi criado com sucesso
       if (response.status === 200 || response.status === 201) {
