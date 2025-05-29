@@ -542,10 +542,31 @@ export async function registerRoutes(app: Express): Promise<Express> {
         }
       }
       
+      // Verificar se o estágio mudou para registrar atividade
+      const stageChanged = validatedData.stageId && validatedData.stageId !== existingDeal.stageId;
+      
       const updatedDeal = await storage.updateDeal(targetId, validatedData);
       
       if (!updatedDeal) {
         return res.status(404).json({ message: "Deal not found" });
+      }
+      
+      // Registrar atividade de mudança de estágio se houve alteração
+      if (stageChanged) {
+        try {
+          const stages = await storage.getPipelineStages();
+          const oldStage = stages.find(s => s.id === existingDeal.stageId);
+          const newStage = stages.find(s => s.id === validatedData.stageId);
+          
+          await logActivity(
+            targetId,
+            'stage_moved',
+            `Lead movido de "${oldStage?.name || 'Estágio desconhecido'}" para "${newStage?.name || 'Estágio desconhecido'}"`
+          );
+        } catch (error) {
+          console.error("Erro ao registrar atividade de mudança de estágio:", error);
+          // Continua mesmo se falhar o registro da atividade
+        }
       }
       
       // Broadcast da atualização em tempo real
