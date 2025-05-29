@@ -11,7 +11,7 @@ import {
   Edit2Icon,
   RefreshCwIcon,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Deal } from "@shared/schema";
 
@@ -112,8 +112,17 @@ export default function KanbanBoard({ pipelineStages, filters, activePipelineId,
   const [pollingProgress, setPollingProgress] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
   
+  // Estados para filtros de vendas realizadas e perdidas
+  const [salePerformanceFilter, setSalePerformanceFilter] = useState<string>("all");
+  const [lossReasonFilter, setLossReasonFilter] = useState<string>("all");
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Buscar motivos de perda para filtros
+  const { data: lossReasons } = useQuery({
+    queryKey: ['/api/loss-reasons'],
+  });
   
   // Buscar deals filtrados por userId se fornecido
   // Se userId for null ou undefined, mostrar todos (admin)

@@ -31,9 +31,10 @@ import { FilterOptions } from "@/components/FilterBar";
 interface SalesResultStagesProps {
   pipelineStages: PipelineStage[];
   filters?: FilterOptions;
+  pipelineId: number;
 }
 
-export default function SalesResultStages({ pipelineStages, filters }: SalesResultStagesProps) {
+export default function SalesResultStages({ pipelineStages, filters, pipelineId }: SalesResultStagesProps) {
   // State para filtro de performance de vendas
   const [salePerformanceFilter, setSalePerformanceFilter] = useState<string>("all");
   // State para filtro de razão de perda
@@ -50,9 +51,16 @@ export default function SalesResultStages({ pipelineStages, filters }: SalesResu
     hideClosed: false
   };
 
-  // Get deals com configurações para garantir atualização imediata
+  // Get deals com configurações para garantir atualização imediata - filtrando por pipeline
   const { data: deals, isLoading } = useQuery<Deal[]>({
-    queryKey: ['/api/deals'],
+    queryKey: ['/api/deals', pipelineId],
+    queryFn: async () => {
+      const response = await fetch(`/api/deals?pipelineId=${pipelineId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch deals');
+      }
+      return response.json();
+    },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     staleTime: 0,
