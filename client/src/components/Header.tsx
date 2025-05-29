@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import SettingsModal from "./SettingsModal";
 import PipelineSelector from "./PipelineSelector";
+import { NotificationCenter } from "./NotificationCenter";
 import { toast } from "@/hooks/use-toast";
 import tbcLogo from "../assets/tbc-logo.png";
 import { useAuth } from "@/components/AuthProvider";
@@ -77,6 +78,12 @@ export default function Header({
             {user && (
               <span className="text-xs text-white bg-black/30 px-2 py-1 rounded-md mr-2">{user.email}</span>
             )}
+            
+            {/* Centro de Notificações */}
+            {hasApiConfig && (
+              <NotificationCenter activePipelineId={activePipelineId || undefined} />
+            )}
+            
             {/* Botão de configurações só para admin */}
             {hasApiConfig && user?.role === 'admin' && (
               <Button 

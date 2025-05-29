@@ -436,6 +436,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
         const deal = await storage.createDeal(validatedData);
         console.log("Negócio criado com sucesso:", JSON.stringify(deal));
         
+        // Criar notificação para todos os usuários
+        await notifyPipelineActivity(deal.id, deal.pipelineId, 'created', deal.name);
+        
         // Broadcast da criação WebSocket
         broadcastUpdate('deal:created', {
           dealId: deal.id,
