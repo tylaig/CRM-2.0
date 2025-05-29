@@ -635,6 +635,12 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
       // Limpar cache imediatamente quando modal abre
       queryClient.removeQueries({ queryKey: ['/api/deals', deal.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/deals', deal.id] });
+      
+      // Forçar busca imediata de dados frescos
+      setTimeout(() => {
+        refetchDealData();
+      }, 100);
+      
       console.log("✅ Cache limpo ao abrir modal");
     }
   }, [isOpen, deal?.id]);
