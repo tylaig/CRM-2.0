@@ -87,15 +87,20 @@ export default function QuoteManager({ dealId, onSelectQuote }: QuoteManagerProp
       return apiRequest("/api/quote-items", "POST", item);
     },
     onSuccess: async () => {
-      // Aguardar a invalidação das cotações primeiro
+      // Invalidar cotações primeiro
       await queryClient.invalidateQueries({ queryKey: [`/api/quote-items/${dealId}`] });
       
-      // Depois invalidar e recarregar os negócios para mostrar o valor atualizado
+      // Invalidar todos os queries relacionados a deals
       await queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       await queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
       
-      // Forçar refetch imediato
+      // Forçar refetch de todos os deals para atualizar o kanban
       await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
+      
+      // Aguardar um pouco e refetch novamente para garantir sincronização
+      setTimeout(async () => {
+        await queryClient.refetchQueries({ queryKey: ["/api/deals"] });
+      }, 500);
     },
     onError: (error) => {
       toast({
