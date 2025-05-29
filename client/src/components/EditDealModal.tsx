@@ -473,10 +473,13 @@ export default function EditDealModal({ isOpen, onClose, deal, pipelineStages }:
     // Armazenar dados do lead para referência
     leadUpdateDataRef.current = leadUpdateData;
     
-    // Atualizar lead primeiro
-    updateLeadMutation.mutate(leadUpdateData);
+    // CORREÇÃO: Só atualizar lead se houver dados alterados no lead
+    const hasLeadChanges = Object.keys(leadUpdateData).length > 0;
+    if (hasLeadChanges) {
+      updateLeadMutation.mutate(leadUpdateData);
+    }
     
-    // Atualizar deal diretamente com os dados corretos
+    // Atualizar deal diretamente com os dados corretos (sempre executar)
     updateDealMutation.mutate(dealUpdate);
   };
   
