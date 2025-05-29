@@ -1,5 +1,6 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { db } from "./db";
 import axios from "axios";
 import { eq } from "drizzle-orm";
 import { 
@@ -17,6 +18,7 @@ import {
   Deal,
   SalePerformanceReason,
   salePerformanceReasons,
+  pipelineStages,
   machineModels,
   machineBrands,
   users
@@ -390,21 +392,34 @@ export async function registerRoutes(app: Express): Promise<Express> {
           
           // Registrar atividade de mudança de etapa
           if (existingDeal.stageId !== stageId) {
-            // Buscar etapas individualmente para garantir que encontremos os nomes
-            const oldStage = await storage.getPipelineStage(existingDeal.stageId);
-            const newStage = await storage.getPipelineStage(stageId);
-            
-            console.log('DEBUG - Mudança de etapa:');
-            console.log('  ID etapa antiga:', existingDeal.stageId);
-            console.log('  ID etapa nova:', stageId);
-            console.log('  Objeto etapa antiga:', oldStage);
-            console.log('  Objeto etapa nova:', newStage);
-            
-            await logActivity(
-              targetId,
-              'stage_change',
-              `Negócio movido da etapa "${oldStage?.name || 'Desconhecido'}" para "${newStage?.name || 'Desconhecido'}"`
-            );
+            // Buscar etapas diretamente do banco para garantir que os nomes sejam encontrados
+            try {
+              const [oldStageResult] = await db
+                .select({ name: pipelineStages.name })
+                .from(pipelineStages)
+                .where(eq(pipelineStages.id, existingDeal.stageId));
+              
+              const [newStageResult] = await db
+                .select({ name: pipelineStages.name })
+                .from(pipelineStages)
+                .where(eq(pipelineStages.id, stageId));
+
+              const oldStageName = oldStageResult?.name || 'Etapa Removida';
+              const newStageName = newStageResult?.name || 'Etapa Não Encontrada';
+              
+              await logActivity(
+                targetId,
+                'stage_change',
+                `Negócio movido da etapa "${oldStageName}" para "${newStageName}"`
+              );
+            } catch (error) {
+              console.error('Erro ao buscar nomes das etapas:', error);
+              await logActivity(
+                targetId,
+                'stage_change',
+                `Negócio movido entre etapas (ID ${existingDeal.stageId} → ${stageId})`
+              );
+            }
           }
           
           // Verificar se houve mudança de pipeline também
